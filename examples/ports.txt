@@ -1,0 +1,2 @@
+; Sends H, i to I/O port 00. Press P in debugger to see OUT events.
+3E 48 D3 00 3E 69 D3 00 76

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Z80 / Lab — virtual microcomputer</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brandmark">Z80<span class="slash">/</span></span><div><b>LAB</b><small>VIRTUAL MICROCOMPUTER</small></div></div>
+    <div class="topright"><span class="tag">64 KiB RAM</span><span class="tag">WebAssembly · local execution</span><span id="status" class="pill">LOADING</span></div>
+  </header>
+  <main class="workspace">
+    <section class="toolbar" aria-label="Execution controls">
+      <div class="controlgroup">
+        <button id="run" data-requires-wasm disabled class="primary">▶ Run <kbd>F5</kbd></button>
+        <button id="pause" data-requires-wasm disabled>Ⅱ Pause</button>
+        <button id="step" data-requires-wasm disabled>→ Step <kbd>F10</kbd></button>
+        <button id="reset" data-requires-wasm disabled>↺ Reset</button><label for="pc-set-value" class="pc-label">Set PC</label><input id="pc-set-value" value="0100" maxlength="6" aria-label="New program counter in hex"/><button id="pc-set" data-requires-wasm disabled>Set</button>
+      </div>
+      <div class="controlgroup secondary-controls"><label for="clock">Virtual clock</label><select id="clock" data-requires-wasm disabled><option value="4000000">4 MHz</option><option value="2000000">2 MHz</option><option value="6000000">6 MHz</option><option value="8000000">8 MHz</option><option value="0">Unlimited</option></select></div>
+    </section>
+    <div id="message" role="status" aria-live="polite">Starting Z80 WebAssembly engine…</div>
+    <div class="panels">
+      <section class="panel console-panel">
+        <div class="panelhead"><h2>Serial terminal</h2><small>Ports 00 · 01 · 02</small></div>
+        <pre id="terminal" class="terminal" aria-label="Z80 serial output"></pre>
+        <form id="serial-form" class="inputline"><span>›</span><input id="serial-input" aria-label="Send characters to Z80" autocomplete="off" spellcheck="false" placeholder="Type a line and press Enter" data-requires-wasm disabled /><button type="submit" data-requires-wasm disabled>Send ↵</button></form>
+      </section>
+      <section class="panel registers-panel">
+        <div class="panelhead"><h2>CPU state</h2><small>Zilog Z80</small></div>
+        <div class="reggrid">
+          <div class="reggroup"><h3>Main registers</h3><div class="regpairs">
+            <div>A <b id="a">00</b></div><div>F <b id="f">00</b></div><div>B <b id="b">00</b></div><div>C <b id="c">00</b></div><div>D <b id="d">00</b></div><div>E <b id="e">00</b></div><div>H <b id="h">00</b></div><div>L <b id="l">00</b></div>
+          </div></div>
+          <div class="reggroup"><h3>Alternate registers</h3><div class="regpairs">
+            <div>A′ <b id="aa">00</b></div><div>F′ <b id="ff">00</b></div><div>B′ <b id="bb">00</b></div><div>C′ <b id="cc">00</b></div><div>D′ <b id="dd">00</b></div><div>E′ <b id="ee">00</b></div><div>H′ <b id="hh">00</b></div><div>L′ <b id="ll">00</b></div>
+          </div></div>
+        </div>
+        <div class="regpairs extended"><div>IX <b id="ix">0000</b></div><div>IY <b id="iy">0000</b></div><div>SP <b id="sp">FFFE</b></div><div>PC <b id="pc">0000</b></div><div>I <b id="i">00</b></div><div>R <b id="r">00</b></div><div>IM <b id="im">0</b></div><div>IFF <b id="iff">0/0</b></div></div>
+        <div class="flags"><span class="flag" title="Sign">S <b id="flag-S">0</b></span><span class="flag" title="Zero">Z <b id="flag-Z">0</b></span><span class="flag" title="Undocumented Y">Y <b id="flag-Y">0</b></span><span class="flag" title="Half carry">H <b id="flag-H">0</b></span><span class="flag" title="Undocumented X">X <b id="flag-X">0</b></span><span class="flag" title="Parity / overflow">P/V <b id="flag-PV">0</b></span><span class="flag" title="Subtract">N <b id="flag-N">0</b></span><span class="flag" title="Carry">C <b id="flag-C">0</b></span></div>
+        <div class="counter"><span>Instructions <b id="instructions">0</b></span><span>T-states <b id="cycles">0</b></span></div>
+      </section>
+      <section class="panel disassembly-panel">
+        <div class="panelhead"><h2>Disassembly</h2><small id="disasm-mode">Following PC · 12 instructions</small></div>
+        <div id="disassembly" class="code-list" aria-label="Z80 disassembly"></div>
+        <div class="paneltools disasm-nav"><label for="disasm-at">Go to</label><input id="disasm-at" value="0100" maxlength="6" aria-label="Disassembly starting address in hex" /><button id="disasm-go" data-requires-wasm disabled>Go</button><button id="disasm-back" data-requires-wasm disabled>Back</button><button id="disasm-next" data-requires-wasm disabled>Next 12</button><button id="disasm-follow" data-requires-wasm disabled>Follow PC</button></div>
+        <div class="paneltools bp-controls"><label for="breakpoint">Break at</label><input id="breakpoint" value="" placeholder="e.g. 0105" maxlength="6" /><button id="breakpoint-set" data-requires-wasm disabled>Add</button><button id="breakpoint-clear" data-requires-wasm disabled>Clear all</button><span id="bp-count" class="small-note">0 active</span></div>
+        <div id="breakpoint-list" class="breakpoint-list" aria-label="Active breakpoints"></div><div class="panelhint">Click a disassembly line to add/remove a breakpoint. Run again to continue past a breakpoint.</div>
+      </section>
+      <section class="panel memory-panel">
+        <div class="panelhead"><h2>Memory inspector</h2><small>128 bytes · hex + ASCII</small></div>
+        <pre id="memory" class="memory"></pre>
+        <div class="paneltools"><label for="memory-at">View address</label><input id="memory-at" value="2000" maxlength="6" /><button id="memory-set" data-requires-wasm disabled>Go</button><button id="memory-prev" data-requires-wasm disabled>−128</button><button id="memory-next" data-requires-wasm disabled>+128</button></div>
+        <form id="memory-edit-form" class="memory-editor"><div class="memory-edit-title">Edit RAM <span>CPU pauses before writes · hex bytes only</span></div><div class="memory-edit-fields"><label for="memory-edit-at">Address</label><input id="memory-edit-at" value="2000" maxlength="6" /><label for="memory-edit-bytes">Bytes</label><input id="memory-edit-bytes" spellcheck="false" autocomplete="off" placeholder="3E 41 D3 00 C9"/><button type="submit" id="memory-write" data-requires-wasm disabled>Write</button></div></form>
+      </section>
+    </div>
+    <section class="loadbar"><div class="loadtitle"><strong>Load program</strong><span>Local files never leave your browser</span></div>
+      <div class="loadcontrols"><select id="sample"><option value="examples/hello.hex">Memory sample · AB</option><option value="examples/console_hello.hex">Serial · Hello</option><option value="examples/console_echo.hex">Serial · Echo</option><option value="examples/monitor.hex">Z80/MON monitor</option></select><button id="load-sample" data-requires-wasm disabled>Load sample</button><span class="or">or</span><label class="filelabel" for="file">Upload .hex / .txt / .bin</label><input id="file" type="file" accept=".hex,.txt,.bin" data-requires-wasm disabled/><label for="origin">Binary origin</label><input id="origin" value="0100" maxlength="6" /></div>
+    </section>
+    <section class="panel assembler-panel" id="assembler-panel" aria-label="Integrated Z80 assembler">
+      <div class="panelhead"><h2>Assembly workspace</h2><small>ASM80 · assembles locally in your browser</small></div>
+      <div class="assembler-tools">
+        <label for="asm-example">Example</label><select id="asm-example"><option value="print">Print a message</option><option value="alphabet">Alphabet loop</option><option value="memory">Memory write</option></select>
+        <button id="asm-example-load">Insert example</button>
+        <label class="asm-file-label" for="asm-file">Open .asm</label><input id="asm-file" type="file" accept=".asm,.z80,.txt" />
+        <button id="asm-save">Save .asm</button>
+      </div>
+      <div class="asm-columns">
+        <div class="asm-editor-wrap"><label for="asm-source">Assembly source</label>
+          <div class="asm-editor-shell"><div class="asm-line-numbers" id="asm-line-numbers" aria-hidden="true">1</div><div class="asm-input-shell"><pre id="asm-highlight" aria-hidden="true"></pre><textarea id="asm-source" autocomplete="off" autocorrect="off" spellcheck="false" wrap="off" aria-label="Z80 assembly source" rows="15"></textarea></div></div>
+        </div>
+        <div class="asm-result-wrap"><label for="asm-listing">Machine-code listing</label><pre id="asm-listing" class="asm-listing">Assemble to see addresses and generated bytes.</pre></div>
+      </div>
+      <div class="assembler-actions"><button id="asm-assemble" class="primary" data-requires-wasm disabled>Assemble &amp; load</button><button id="asm-hex-save" disabled>Download Intel HEX</button><span id="asm-status" role="status" aria-live="polite">Assembler bundle loading…</span></div>
+      <p class="asm-hint">ORG sets the load address. The first emitted address (or explicit END entry) becomes PC. Loading resets CPU/RAM and clears breakpoints. Single-file ASM80 syntax; Pasmo compatibility is not guaranteed.</p>
+    </section>
+    <footer>v0.6.0 · Native Z80 core unchanged; ZEXDOC/ZEXALL previously 67/67 on Euler · Browser conformance pending · Safari 15+ target · ASM80 MIT</footer>
+  </main>
+</body></html>

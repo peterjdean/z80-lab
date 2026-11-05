@@ -1,0 +1,23 @@
+/build/
+/build-asan/
+/.idea/
+/.vscode/
+*.o
+*.a
+.DS_Store
+tests/external/
+
+# Dedicated WebAssembly build output
+/build-wasm/
+
+# Node.js / assembler build dependencies
+/node_modules/
+/coverage/
+/.npm/
+npm-debug.log*
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
