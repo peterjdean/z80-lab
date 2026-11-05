@@ -6,6 +6,12 @@ export function emitIntelHex(result) {
   const memory = new Map();
   let firstAddress = null;
   const listing = [];
+  // Debug map is valid for this one assembled source only. The address keys
+  // refer to first bytes of emitted rows, never arbitrary bytes within an
+  // instruction (important for multi-byte Z80 instructions).
+  const addressToLine = Object.create(null);
+  const lineToAddresses = Object.create(null);
+  const entries = [];
   for (const row of result.dump) {
     if (row.ifskip || !row.lens || row.lens.length === 0) continue;
     const start = Number(row.addr);
@@ -21,6 +27,14 @@ export function emitIntelHex(result) {
         throw new Error(`Assembler returned an invalid byte at $${address.toString(16).toUpperCase()}.`);
       if (memory.has(address)) throw new Error(`Overlapping output at $${address.toString(16).toUpperCase().padStart(4,'0')}.`);
       memory.set(address,value);
+    }
+    const line = Number(row.numline);
+    if (Number.isInteger(line) && line > 0 && !row.includedFile) {
+      // A single source line can expand into multiple emitted rows.
+      if (addressToLine[start] === undefined) addressToLine[start] = line;
+      if (!lineToAddresses[line]) lineToAddresses[line] = [];
+      if (!lineToAddresses[line].includes(start)) lineToAddresses[line].push(start);
+      entries.push({address:start, line, length:bytes.length});
     }
     const label = row.label ? `${row.label}: ` : '';
     const params=Array.isArray(row.params)?row.params.join(', '):String(row.params ?? '');
@@ -51,7 +65,8 @@ export function emitIntelHex(result) {
   // Our machine has only 16-bit addresses, so the high word is zero.
   records.push(record(0,5,[0,0,entry>>>8,entry&255]));
   records.push(record(0,1,[]));
-  return {hex:records.join('\n')+'\n', entry, count:memory.size, listing:listing.join('\n')};
+  return {hex:records.join('\n')+'\n', entry, count:memory.size,
+    listing:listing.join('\n'), sourceMap:{addressToLine,lineToAddresses,entries}};
 }
 
 export function formatAssemblyError(error) {

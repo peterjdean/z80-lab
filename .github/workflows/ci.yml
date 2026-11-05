@@ -1,0 +1,32 @@
+name: Z80/LAB checks
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure native C++ build
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Run native regression tests
+        run: ctest --test-dir build --output-on-failure
+
+  assembler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned assembler and bundler dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run ASM80 and source-map tests
+        run: npm run test:assembler
+      - name: Bundle browser assembler for Safari 15+
+        run: npm run build:assembler -- /tmp/z80-lab-assembler.js

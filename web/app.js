@@ -6,6 +6,9 @@ let ready=false;
 let serial='';
 let current=null;
 let pendingAssembly=null;
+let loadedSourceMap=null;
+let sourcePcLine=null;
+let sourceBreakpointAddresses=new Set();
 let viewingMemory=0x2000;
 const toHex=(n,width=2)=>Number(n).toString(16).toUpperCase().padStart(width,'0');
 const flagBit=(f,mask)=>f&mask?'1':'0';
@@ -58,6 +61,8 @@ function render(data) {
   $('disasm-follow').disabled=followingPC;
   if(document.activeElement!==$('disasm-at'))$('disasm-at').value=toHex(disasmAddress,4);
   const bpSet=new Set(breakpoints);
+  sourceBreakpointAddresses=bpSet;
+  updateSourceDebugger(st.pc,running);
   $('disassembly').replaceChildren(...rows.map(row=>{
     const el=document.createElement('button');
     el.type='button';
@@ -106,7 +111,13 @@ worker.onmessage = event=>{
   }
   if(data.type==='loaded'){
     notice(`${data.count} bytes loaded. Ready to execute.`);
-    if(pendingAssembly){$('asm-status').textContent=`Assembled ${pendingAssembly.count} bytes and loaded at entry $${toHex(pendingAssembly.entry,4)}.`;pendingAssembly=null;}
+    if(pendingAssembly){
+      const result=pendingAssembly;
+      loadedSourceMap=source.value===result.source ? result.sourceMap : null;
+      $('asm-status').textContent=`Assembled ${result.count} bytes and loaded at entry $${toHex(result.entry,4)}.`;
+      pendingAssembly=null;
+      paintEditor();
+    }
   }
   if(data.type==='state') {
     if(data.output){
@@ -123,7 +134,8 @@ function formatFor(filename) {
   const ext=filename.split('.').pop().toLowerCase();
   return ext==='bin'?3:ext==='hex'?1:ext==='txt'?2:0;
 }
-function loadBytes(bytes,filename){
+function loadBytes(bytes,filename,{fromAssembly=false}={}){
+  if(!fromAssembly) clearSourceMap('A different program was loaded. Reassemble to restore source debugging.');
   const format=formatFor(filename);
   const origin=format===3?validAddress($('origin').value):-1;
   serial='';$('terminal').textContent='';
@@ -174,6 +186,8 @@ $('memory-edit-form').addEventListener('submit',e=>{
     const address=validAddress($('memory-edit-at').value);
     const bytes=parseBytes($('memory-edit-bytes').value);
     if(address+bytes.length>65536)throw new Error('Edit would cross $FFFF.');
+    if(loadedSourceMap && loadedSourceMap.entries.some(row=>address<row.address+row.length && row.address<address+bytes.length))
+      clearSourceMap('Machine code was edited. Reassemble to restore source debugging.');
     send({type:'write-memory',address,bytes});
   }catch(error){notice(error.message,true);}
 });
@@ -265,23 +279,77 @@ function paintCode(line) {
   }
   return result+escapeMarkup(line.slice(last));
 }
+function clearSourceMap(message='Source changed. Reassemble to restore source debugging.') {
+  loadedSourceMap=null;
+  sourcePcLine=null;
+  if($('asm-debug-status')) {
+    $('asm-debug-status').textContent=message;
+    $('asm-debug-status').classList.add('unmapped');
+  }
+  paintEditor();
+}
+function mappedLine(address) {
+  return loadedSourceMap?.addressToLine?.[address] ?? null;
+}
+function updateSourceDebugger(pc,running=false) {
+  const line=mappedLine(pc);
+  const changed=line!==sourcePcLine;
+  sourcePcLine=line;
+  const gutter=[...lineNumbers.children];
+  for(let i=0;i<gutter.length;i++) {
+    const el=gutter[i];
+    const addresses=loadedSourceMap?.lineToAddresses?.[i+1] || [];
+    const hasBreakpoint=addresses.some(address=>sourceBreakpointAddresses.has(address));
+    el.classList.toggle('source-current',i+1===line);
+    el.classList.toggle('source-breakpoint',hasBreakpoint);
+    el.setAttribute('aria-current',i+1===line?'true':'false');
+    if(el.tagName==='BUTTON')el.setAttribute('aria-pressed',String(hasBreakpoint));
+  }
+  const lines=[...highlighted.children].filter(el=>el.classList.contains('asm-source-line'));
+  for(let i=0;i<lines.length;i++)lines[i].classList.toggle('source-current',i+1===line);
+  const status=$('asm-debug-status');
+  status.classList.toggle('unmapped',!loadedSourceMap||line===null);
+  if(!loadedSourceMap) {
+    // Preserve helpful stale-map notices until the next successful assembly.
+    if(!status.textContent)status.textContent='Assemble & load to enable source debugging.';
+  } else if(line!==null) status.textContent=`PC $${toHex(pc,4)} · source line ${line}${running?' · running':''}`;
+  else status.textContent=`PC $${toHex(pc,4)} is outside known source instruction starts.`;
+  if(changed && line!==null && !running && document.activeElement!==source){
+    const top=(line-1)*20;
+    if(top<source.scrollTop || top+20>source.scrollTop+source.clientHeight)
+      source.scrollTop=Math.max(0,top-source.clientHeight/2+10);
+    syncEditorScroll();
+  }
+}
 function paintEditor(){
   const lines=source.value.split('\n');
-  highlighted.innerHTML=lines.map(paintCode).join('\n')+'\n';
-  lineNumbers.textContent=lines.map((_,i)=>String(i+1)).join('\n');
+  highlighted.innerHTML=lines.map(line=>`<span class="asm-source-line">${paintCode(line)||' '}</span>`).join('\n')+'\n';
+  lineNumbers.replaceChildren(...lines.map((_,i)=>{
+    const addresses=loadedSourceMap?.lineToAddresses?.[i+1]||[];
+    const el=document.createElement(addresses.length?'button':'span');
+    el.className='asm-gutter-line';el.textContent=String(i+1);
+    if(addresses.length){
+      el.type='button';
+      el.title=`Toggle breakpoint at $${toHex(addresses[0],4)} (source line ${i+1})`;
+      el.setAttribute('aria-label',el.title);
+      el.addEventListener('click',()=>send({type:'breakpoint-toggle',address:addresses[0]}));
+    }
+    return el;
+  }));
   syncEditorScroll();
+  if(current)updateSourceDebugger(current.pc,false);
 }
 function syncEditorScroll(){
   highlighted.scrollTop=source.scrollTop;
   highlighted.scrollLeft=source.scrollLeft;
   lineNumbers.scrollTop=source.scrollTop;
 }
-source.addEventListener('input',()=>{paintEditor();assembled=null;$('asm-hex-save').disabled=true;});
+source.addEventListener('input',()=>{assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();});
 source.addEventListener('scroll',syncEditorScroll);
 source.addEventListener('keydown',event=>{
   if(event.key!=='Tab')return;
   event.preventDefault();const start=source.selectionStart,end=source.selectionEnd;
-  source.setRangeText('    ',start,end,'end');paintEditor();assembled=null;$('asm-hex-save').disabled=true;
+  source.setRangeText('    ',start,end,'end');assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
 });
 source.value=assemblyExamples.print;paintEditor();
 function downloadText(name,text,mime='text/plain'){
@@ -293,14 +361,14 @@ function downloadText(name,text,mime='text/plain'){
 }
 $('asm-example-load').addEventListener('click',()=>{
   source.value=assemblyExamples[$('asm-example').value]||assemblyExamples.print;
-  paintEditor();assembled=null;$('asm-hex-save').disabled=true;
+  assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
   $('asm-status').textContent='Example loaded. Assemble & load to run.';
 });
 $('asm-file').addEventListener('change',async event=>{
   const file=event.target.files[0];if(!file)return;
   try{
     if(file.size>200_000)throw new Error('Assembly source exceeds 200 KB.');
-    source.value=await file.text();paintEditor();assembled=null;$('asm-hex-save').disabled=true;
+    source.value=await file.text();assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
     $('asm-status').textContent=`Opened ${file.name} locally.`;
   }catch(error){$('asm-status').textContent=error.message;$('asm-status').classList.add('error');}
 });
@@ -317,17 +385,21 @@ $('asm-assemble').addEventListener('click',async()=>{
   try{
     const module=await assemblerPromise;
     if(!module)throw new Error('Assembler bundle not available. Run the assembler build on Euler.');
-    const result=await module.assembleZ80(source.value);
+    const assemblyText=source.value;
+    const result=await module.assembleZ80(assemblyText);
+    if(source.value!==assemblyText)throw new Error('Source changed during assembly; assemble again.');
+    result.source=assemblyText;
     assembled=result;
     $('asm-listing').textContent=result.listing||'No listing generated';
     $('asm-hex-save').disabled=false;
     // Conversion to Intel HEX is the sole bridge to the unchanged Z80 core.
     const bytes=encoder.encode(result.hex);
     pendingAssembly=result;
-    loadBytes(bytes,'program.hex');
+    loadBytes(bytes,'program.hex',{fromAssembly:true});
     $('asm-status').textContent=`Assembled ${result.count} bytes; loading at entry $${toHex(result.entry,4)}…`;
     $('pc-set-value').value=toHex(result.entry,4);
   }catch(error){
+    pendingAssembly=null;
     assembled=null;$('asm-hex-save').disabled=true;
     $('asm-status').classList.add('error');
     $('asm-status').textContent=error.message;
