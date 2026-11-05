@@ -41,3 +41,31 @@ test('reject malformed output and overlapping addresses',()=>{
 test('error text preserves assembler line numbers',()=>{
   assert.match(formatAssemblyError({error:{msg:'Invalid mnemonic',wline:{numline:12}}}),/Line 12: Invalid mnemonic/);
 });
+
+test('source map associates only emitted instruction starts with source lines',()=>{
+  const result=emitIntelHex({dump:[
+    {numline:1,opcode:'ORG',addr:0x100,lens:[]},
+    {numline:2,addr:0x100,lens:[0x21,0x00,0x20],opcode:'LD'},
+    {numline:3,addr:0x103,lens:[0x3e,0x41],opcode:'LD'},
+    {numline:4,addr:0x105,lens:[0x28,0x05],opcode:'JR'},
+    {numline:5,addr:0x107,lens:[0xd3,0x00],opcode:'OUT'},
+    {numline:5,addr:0x109,lens:[0x23],opcode:'INC'},
+    {numline:6,addr:0x10a,lens:[0x76],opcode:'HALT'}
+  ], opts:{}});
+  assert.equal(result.sourceMap.addressToLine[0x107],5);
+  assert.equal(result.sourceMap.addressToLine[0x108],undefined);
+  assert.deepEqual(result.sourceMap.lineToAddresses[5],[0x107,0x109]);
+  assert.equal(result.sourceMap.lineToAddresses[1],undefined);
+  assert.deepEqual(result.sourceMap.entries[3],{address:0x107,line:5,length:2});
+});
+test('source map supports discontinuous regions and missing or included-line metadata',()=>{
+  const result=emitIntelHex({dump:[
+    {numline:2,addr:0x100,lens:[0x76]},
+    {numline:9,addr:0x2000,lens:[0x48,0x49]},
+    {addr:0x3000,lens:[0x00]},
+    {numline:12,includedFile:'other.asm',addr:0x3001,lens:[0x00]}
+  ],opts:{}});
+  assert.deepEqual(result.sourceMap.lineToAddresses[9],[0x2000]);
+  assert.equal(result.sourceMap.addressToLine[0x3000],undefined);
+  assert.equal(result.sourceMap.addressToLine[0x3001],undefined);
+});

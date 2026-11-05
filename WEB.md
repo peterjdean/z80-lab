@@ -96,3 +96,40 @@ previously cached, press Option-Command-R.
   validated v0.3.x. Full conformance on the web build remains a future task.
 * No source-level breakpoints yet (that will follow once listing/source maps
   are integrated). The source editor is deliberately single-file in v0.6.
+
+
+## v0.7 source-level debugging (development branch)
+
+After **Assemble & load**, each emitted instruction start address is linked to
+ASM80's original single-file source line. The running PC highlights the
+matching source line, and clicking an *enabled* source line number toggles a
+real Z80 breakpoint. Breakpoints added through the disassembly also appear in
+the source gutter. This is assembled-address mapping, not a heuristic parser:
+`ORG` regions and relative branches use the assembler's actual addresses.
+
+Only lines that emitted bytes have a clickable source breakpoint marker. For a
+`DB`/`DS` line, the row start is considered a potential entry address, but it
+is not necessarily an executable instruction. Breakpoints inside instruction
+operands do not fire. When PC leaves the map (e.g. a subroutine entered from
+external code), the source highlight disappears rather than guessing.
+
+Changing source text, loading another program, or manually editing bytes
+overlapping the emitted code invalidates the source map until the next
+**Assemble & load**. Reset/Set PC alone keep the map. Source maps do not
+currently survive a page reload, and macros that lack a source line in ASM80's
+output remain unmapped. No WebAssembly CPU code is changed.
+
+### Source-debugging acceptance checks
+
+1. Assemble the alphabet example; verify source line numbers for `LD B,16`,
+   `LD A,'A'`, `OUT`, `INC`, `DJNZ`, and `HALT` are clickable.
+2. Click the `INC A` line number; Run should stop with PC at `$0106` before
+   executing `INC A`, with that source line highlighted.
+3. Press Run again, then Pause; it should pass that instruction and loop,
+   eventually returning to the same breakpoint on the next iteration.
+4. Clear breakpoints, Single-step from reset; the current source line should
+   follow PC and the disassembly highlight.
+5. Change source text; source breakpoints should be disabled pending reassembly.
+6. Edit a byte within assembled code; the mapping should be invalidated, not
+   show potentially stale correspondence.
+7. Test in Safari and check browser console before merging the PR.

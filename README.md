@@ -38,3 +38,14 @@ may need changes; in v0.6 `INCLUDE` and `INCBIN` are intentionally unsupported.
 **Licensing:** original project retains its existing `LICENSE`; the embedded
 third-party assembler is MIT and its notice is preserved in
 `THIRD_PARTY_LICENSES.txt`.
+
+
+### v0.7 development: source-level debugging
+
+On the `feature/source-debugging` branch, ASM80's 1-based source line metadata
+links emitted instruction starts to assembly source. An active source line is
+highlighted alongside the disassembly, and clicking its line number toggles
+a real breakpoint. The mapping is discarded after changes to source text,
+manual writes overlapping assembled code, or loading a different program.
+The C++ Z80 core remains unchanged. See `WEB.md` for the Safari acceptance
+checklist.

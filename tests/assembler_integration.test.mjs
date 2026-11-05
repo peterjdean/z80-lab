@@ -24,3 +24,24 @@ test('ASM80 resolves forward labels and JR displacement',async()=>{
 test('ASM80 rejects unknown instructions and does not return code',async()=>{
   await assert.rejects(()=>assembleZ80('        ORG $0100\n        FOO A,B\n'),Error);
 });
+
+test('ASM80 emits source-line metadata for source debugging',async()=>{
+  const program=`        ORG $0100
+        LD B,16
+        LD A,'A'
+LOOP:   OUT ($00),A
+        INC A
+        DJNZ LOOP
+        HALT
+`;
+  const result=await assembleZ80(program);
+  assert.equal(result.sourceMap.addressToLine[0x100],2);
+  assert.equal(result.sourceMap.addressToLine[0x102],3);
+  assert.equal(result.sourceMap.addressToLine[0x104],4);
+  assert.equal(result.sourceMap.addressToLine[0x105],undefined); // Port operand
+  assert.equal(result.sourceMap.addressToLine[0x106],5);
+  assert.equal(result.sourceMap.addressToLine[0x107],6);
+  assert.equal(result.sourceMap.addressToLine[0x108],undefined); // DJNZ offset
+  assert.equal(result.sourceMap.addressToLine[0x109],7);
+  assert.deepEqual(result.sourceMap.lineToAddresses[5],[0x106]);
+});
