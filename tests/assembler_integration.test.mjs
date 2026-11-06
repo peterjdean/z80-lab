@@ -45,3 +45,19 @@ LOOP:   OUT ($00),A
   assert.equal(result.sourceMap.addressToLine[0x109],7);
   assert.deepEqual(result.sourceMap.lineToAddresses[5],[0x106]);
 });
+
+
+test('ASM80 unknown mnemonic reports the offending source line',async()=>{
+  const program=`        ORG $0100
+        LD B,16
+        LD A,'A'
+LOOP:   OUT ($00),A
+        INC A
+        FAKEOP A,B
+        HALT`;
+  await assert.rejects(()=>assembleZ80(program),error=>{
+    assert.equal(error.diagnostics?.[0]?.line,6);
+    assert.match(error.message,/Line 6:.*FAKEOP/);
+    return true;
+  });
+});

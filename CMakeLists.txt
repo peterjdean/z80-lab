@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(z80emu VERSION 0.8.0 LANGUAGES CXX)
+project(z80emu VERSION 0.9.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -39,6 +39,7 @@ if(EMSCRIPTEN)
             "${CMAKE_CURRENT_SOURCE_DIR}/web/assembler-source.js"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/assembler-core.mjs"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/session-format.mjs"
+            "${CMAKE_CURRENT_SOURCE_DIR}/web/source-step.mjs"
             "${CMAKE_CURRENT_SOURCE_DIR}/THIRD_PARTY_LICENSES.txt"
        DESTINATION "${CMAKE_BINARY_DIR}/site")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/site/examples")
@@ -122,6 +123,8 @@ if(BUILD_TESTING)
   find_program(NODE_EXECUTABLE NAMES node)
   if(NODE_EXECUTABLE)
     add_test(NAME browser_assembler_hex_conversion COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/assembler_core.test.mjs)
+    add_test(NAME browser_source_step_rules COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/source_step.test.mjs)
+    add_test(NAME browser_source_step_worker COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/source_step_worker.test.cjs)
     add_test(NAME browser_session_file_format COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/session_format.test.mjs)
     add_test(NAME browser_worker_breakpoint_continuation
       COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/worker_breakpoint_smoke.cjs)

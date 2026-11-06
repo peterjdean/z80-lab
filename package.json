@@ -1,12 +1,12 @@
 {
   "name": "z80-lab-web-tools",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "description": "Client-side ASM80 assembler integration for Z80/LAB",
   "scripts": {
     "build:assembler": "node scripts/build_assembler.mjs",
-    "test:assembler": "node --test tests/assembler_core.test.mjs tests/assembler_integration.test.mjs tests/session_format.test.mjs"
+    "test:assembler": "node --test tests/assembler_core.test.mjs tests/assembler_integration.test.mjs tests/session_format.test.mjs tests/source_step.test.mjs"
   },
   "dependencies": {
     "@asm80/core": "1.3.0"

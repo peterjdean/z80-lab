@@ -1,9 +1,9 @@
-# Z80/LAB — v0.8 development
+# Z80/LAB — v0.9 development
 
 Generic Z80 emulator with 64 KiB RAM, terminal debugger, CPU registers, serial
 I/O ports, disassembly, breakpoints, memory viewer/editor, 4 MHz clock option,
 and a Safari-first browser build. The browser includes an integrated ASM80 assembler (`@asm80/core` 1.3.0, MIT),
-source-level debugging, and portable saved sessions in v0.8 development.
+source-level debugging, and portable saved sessions (v0.8). v0.9 adds source stepping, keyboard shortcuts and inline diagnostics.
 
 **Build on Ubuntu/Euler:** see [WEB.md](WEB.md) for complete instructions,
 including the separate assembler bundle build and Safari acceptance test.
@@ -29,8 +29,8 @@ serve the entire directory (including `assembler.js`, `z80wasm.mjs`,
 
 **Compatibility:** Safari 15+ is a *design target*. The compiler targets
 standard 32-bit WebAssembly, with no pthreads, memory64 or SIMD requirement.
-The browser assembly and v0.7 debugger were previously verified on Euler
-and Safari; v0.8 session restoration still needs Euler/Safari acceptance.
+The browser assembly, v0.7 debugger and v0.8 session restoration were
+verified on Euler in Safari. The v0.9 features require a new Safari acceptance test.
 
 **Source-code semantics:** ASM80 is not Pasmo. Some Pasmo-specific constructs
 may need changes; in v0.6 `INCLUDE` and `INCBIN` are intentionally unsupported.
@@ -67,3 +67,24 @@ There is no server-side persistence, upload or automatic cloud sync.
 For the initial version, the saved source map is restored from the file rather
 than regenerated and checked against self-modified RAM; reassemble if you alter
 machine code outside the editor. Browser disassembly Back history is not saved.
+
+
+## v0.9 development — stepping and editor feedback
+
+**Step source** executes until the program counter reaches a *different* mapped
+assembly source line. It honours breakpoints, HALT and unmapped destinations;
+source-line expansions (for example, macros) can contain multiple Z80
+instructions. A same-line branch is bounded to 20,000 instructions and executed
+cooperatively in the Worker so **Pause** remains responsive. This is *step
+into* behaviour for calls and branches, not subroutine step-over. Normal
+instruction stepping is unchanged. The source mapping must be active: edit
+source or code, then reassemble before using Step source again.
+
+Keyboard shortcuts are F5 Run, Shift+F5 Pause, F10 Step instruction, F11 or
+Shift+F10 Step source and Command/Ctrl+Enter Assemble & load (also from the
+editor). Function keys may need the Fn key on macOS. Assembler errors with
+line information show a red gutter marker, a highlighted source line and a
+clickable diagnostic which moves the editor caret to that line.
+
+The Z80 C++ core and v0.8 session-file schema are unchanged. See `WEB.md` for
+build instructions and the v0.9 Safari acceptance checklist.

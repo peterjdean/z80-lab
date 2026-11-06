@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT=Path(__file__).resolve().parents[1]
 HTML=(ROOT/'web/index.html').read_text().replace('<script type="module" src="app.js"></script>', '')
-APP=(ROOT/'web/app.js').read_text()
+APP=(ROOT/'web/app.js').read_text().replace("import {extractAssemblyDiagnostics} from './assembler-core.mjs';",'const extractAssemblyDiagnostics=()=>[];')
 
 state_keys=('a f b c d e h l aa ff bb cc dd ee hh ll i r ix iy sp pc im '
             'iff1 iff2 halted instructions cycles').split()

@@ -22,7 +22,7 @@ class Ids(HTMLParser):
 
 def check(root, site=False):
     base = Path(root)
-    expected = ["index.html", "app.js", "worker.js", "style.css", "assembler-core.mjs", "assembler-source.js", "session-format.mjs"]
+    expected = ["index.html", "app.js", "worker.js", "style.css", "assembler-core.mjs", "assembler-source.js", "session-format.mjs", "source-step.mjs"]
     if site:
         expected += ["z80wasm.mjs", "z80wasm.wasm", "assembler.js", "THIRD_PARTY_LICENSES.txt",
                      "examples/hello.hex", "examples/console_hello.hex",
@@ -41,12 +41,12 @@ def check(root, site=False):
             raise ValueError(f"App references unknown HTML id: {match.group(1)}")
     for key in ("z80wasm.mjs", "_z80_run_slice", "_z80_set_breakpoint",
                 "_z80_write_byte", "_z80_set_pc", "_z80_snapshot_save", "_z80_snapshot_restore", "_z80_state_json", "_z80_load",
-                "disasm-follow", "breakpoint-toggle", "write-memory"):
+                "disasm-follow", "breakpoint-toggle", "write-memory", "source-step"):
         if key not in worker:
             raise ValueError(f"Worker missing required code: {key}")
     for required in ("memory-edit-form", "disasm-at", "breakpoint-list", "memory-next",
                      "asm-source", "asm-assemble", "pc-set-value", "pc-set", "asm-listing",
-                     "session-file", "session-save"):
+                     "session-file", "session-save", "source-step", "asm-diagnostics"):
         if required not in ids.ids:
             raise ValueError(f"Missing debugger element: {required}")
     if site and not (base / "assembler.js").read_text().strip():
