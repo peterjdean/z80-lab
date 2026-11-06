@@ -111,6 +111,54 @@ function acceptMessage(event) {
   const msg=event.data;
   try {
     switch(msg.type) {
+      case 'session-save': {
+        // Worker messages are serialised: stop before copying CPU and UART state.
+        const previousReason=stopReason;
+        stop();
+        stopReason=previousReason==='breakpoint'?'breakpoint':'paused';
+        snapshot(); // First flush any pending serial output to the UI.
+        const length=wasm._z80_snapshot_size();
+        if(length<0)throw new Error(asText(wasm._z80_last_error()));
+        const ptr=wasm._malloc(length);
+        if(!ptr)throw new Error('Out of WASM memory');
+        let bytes;
+        try {
+          const written=wasm._z80_snapshot_save(ptr,length);
+          if(written!==length)throw new Error(asText(wasm._z80_last_error())||'Snapshot length changed');
+          bytes=wasm.HEAPU8.slice(ptr,ptr+length);
+        } finally {wasm._free(ptr);}
+        postMessage({type:'session-data',requestId:msg.requestId,bytes:bytes.buffer,
+          debugger:{clock,breakpoints:[...breakpoints].sort((a,b)=>a-b),
+            memoryAddress,disasmAddress,stopReason}},[bytes.buffer]);
+        break;
+      }
+      case 'session-restore': {
+        const d=msg.debugger;
+        if(!d||typeof d!=='object'||!validAddress(d.memoryAddress)||
+          (d.disasmAddress!==null&&!validAddress(d.disasmAddress))||
+          ![0,2_000_000,4_000_000,6_000_000,8_000_000].includes(d.clock)||
+          !Array.isArray(d.breakpoints)||d.breakpoints.length>64||
+          d.breakpoints.some(x=>!validAddress(x))||
+          new Set(d.breakpoints).size!==d.breakpoints.length)
+          throw new Error('Invalid session debugger settings');
+        const bytes=new Uint8Array(msg.bytes);
+        if(bytes.length<65868||bytes.length>1200000)throw new Error('Invalid CPU snapshot size');
+        // Native restoration validates the whole snapshot transactionally.
+        const result=allocBytes(bytes,p=>wasm._z80_snapshot_restore(p,bytes.length));
+        if(result<0)throw new Error(asText(wasm._z80_last_error()));
+        stop();
+        clock=d.clock;
+        memoryAddress=d.memoryAddress;
+        disasmAddress=d.disasmAddress;
+        disasmHistory=[];
+        stopReason=d.stopReason==='breakpoint'?'breakpoint':'restored';
+        breakpoints.clear();
+        for(const address of d.breakpoints)setBreakpoint(address,true);
+        resetEpoch();
+        postMessage({type:'session-restored',requestId:msg.requestId});
+        snapshot();
+        break;
+      }
       case 'load': {
         stop();
         const bytes=new Uint8Array(msg.bytes);
@@ -208,7 +256,8 @@ function acceptMessage(event) {
 async function boot() {
   try {
     wasm=await createZ80({locateFile:filename=>new URL(filename,import.meta.url).href});
-    if(!wasm.HEAPU8||!wasm._z80_init||!wasm._z80_set_breakpoint||!wasm._z80_set_pc)
+    if(!wasm.HEAPU8||!wasm._z80_init||!wasm._z80_set_breakpoint||!wasm._z80_set_pc||
+      !wasm._z80_snapshot_save||!wasm._z80_snapshot_restore)
       throw new Error('Missing exported WebAssembly API');
     wasm._z80_init();
     onmessage=acceptMessage;

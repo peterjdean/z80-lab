@@ -19,6 +19,13 @@ public:
     static constexpr uint8_t STATUS = 0x02;
     static constexpr size_t OUTPUT_HISTORY_LIMIT = 16384;
 
+    struct Snapshot {
+        std::string incoming;
+        std::string outgoing;
+        uint64_t transmitted = 0;
+    };
+    Snapshot saveState() const;
+    void restoreState(const Snapshot& saved);
     void reset();
     void queueInput(std::string_view bytes);
     uint8_t receive();

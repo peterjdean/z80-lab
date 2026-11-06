@@ -1,6 +1,6 @@
-# Z80/LAB v0.6.0 — Safari-compatible browser development environment
+# Z80/LAB — Safari-compatible browser development environment (v0.8)
 
-This release adds a third-party ASM80 browser assembler, a source editor,
+The v0.6 baseline added a third-party ASM80 browser assembler, a source editor,
 assembler diagnostics, a machine-code listing, save/open `.asm` and download
 Intel HEX, plus a **Set PC** debugger control. It retains the existing C++
 CPU core and serial emulator. All emulation and assembly run in the visitor's
@@ -133,3 +133,31 @@ output remain unmapped. No WebAssembly CPU code is changed.
 6. Edit a byte within assembled code; the mapping should be invalidated, not
    show potentially stale correspondence.
 7. Test in Safari and check browser console before merging the PR.
+
+
+## v0.8 session persistence (development)
+
+Click **Save session** to pause the emulated CPU and download
+`z80-lab-session.z80session`. Click **Open session** to restore the file in
+this browser. No backend is involved. The restored CPU always starts paused.
+The session includes 64 KiB RAM, every Z80 register and interrupt flag,
+T-states/instruction counts, current serial queues/transcript, virtual ports,
+reset entry, breakpoints, execution speed, memory/disassembly inspector
+positions, assembler source, listing and source mapping.
+
+### Acceptance test on Euler/Safari
+
+1. Assemble the Alphabet loop, break at the `INC A` source line, run to it.
+2. Use **Save session** and keep the `.z80session` file.
+3. Change source, clear the breakpoints and load a different sample.
+4. Open the saved session. The PC, A/B registers, breakpoint, source highlight,
+   clock, and displayed serial output should match the paused saved state.
+5. Press **Run**; the program should continue from the saved PC rather than
+   restarting. A save while running also pauses the virtual CPU.
+6. Try opening a non-session JSON file: the app should show an error and leave
+   the current working machine untouched.
+
+Tests: `ctest --test-dir build --output-on-failure` runs the native binary
+snapshot round-trip tests. `npm run test:assembler` now also runs the portable
+session file format validation tests. An actual Emscripten/Safari build must
+be verified on Euler.

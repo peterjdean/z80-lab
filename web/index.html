@@ -23,6 +23,13 @@
       <div class="controlgroup secondary-controls"><label for="clock">Virtual clock</label><select id="clock" data-requires-wasm disabled><option value="4000000">4 MHz</option><option value="2000000">2 MHz</option><option value="6000000">6 MHz</option><option value="8000000">8 MHz</option><option value="0">Unlimited</option></select></div>
     </section>
     <div id="message" role="status" aria-live="polite">Starting Z80 WebAssembly engine…</div>
+    <section class="sessionbar" aria-label="Save or restore an emulator session">
+      <div><strong>Session</strong><span>Keep your CPU, RAM, source, breakpoints and terminal together</span></div>
+      <div class="session-controls"><button id="session-save" data-requires-wasm disabled>Save session</button>
+        <label class="filelabel" id="session-open" for="session-file">Open session</label>
+        <input id="session-file" type="file" accept=".z80session,.json" data-requires-wasm disabled /></div>
+    </section>
+
     <div class="panels">
       <section class="panel console-panel">
         <div class="panelhead"><h2>Serial terminal</h2><small>Ports 00 · 01 · 02</small></div>
@@ -78,6 +85,6 @@
       <div class="assembler-actions"><button id="asm-assemble" class="primary" data-requires-wasm disabled>Assemble &amp; load</button><button id="asm-hex-save" disabled>Download Intel HEX</button><span id="asm-status" role="status" aria-live="polite">Assembler bundle loading…</span></div>
       <p class="asm-hint">ORG sets the load address. The first emitted address (or explicit END entry) becomes PC. Loading resets CPU/RAM and clears breakpoints. Source debugging uses ASM80's emitted line mapping: only emitted row starts accept source breakpoints. Editing source or loaded code invalidates the map. Single-file ASM80 syntax; Pasmo compatibility is not guaranteed.</p>
     </section>
-    <footer>v0.7.0 development · Native Z80 core unchanged; ZEXDOC/ZEXALL previously 67/67 on Euler · Browser conformance pending · Safari 15+ target · ASM80 MIT</footer>
+    <footer>v0.8.0 development · Native Z80 core unchanged; ZEXDOC/ZEXALL previously 67/67 on Euler · Browser conformance pending · Safari 15+ target · ASM80 MIT</footer>
   </main>
 </body></html>

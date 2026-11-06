@@ -97,5 +97,44 @@ int main() {
     assert(z80_set_breakpoint(0x3000,0)==0);
     assert(z80_set_breakpoint(0x3040,1)==0);
     z80_clear_breakpoints();
-    std::cout<<"PASS: native browser C ABI, loaders, breakpoints, serial I/O and memory\n";
+    // v0.8: lossless CPU, RAM, ports, counters and serial queue snapshot.
+    assert(load(std::string("3E41D30076"),2,0x100)==5);
+    assert(z80_step()==1); // LD A,'A'
+    assert(z80_step()==1); // OUT 00 -> transmit A
+    const std::string queued="Q";
+    assert(z80_queue_input(reinterpret_cast<const unsigned char*>(queued.data()),1)==1);
+    const std::string saved_state=z80_state_json();
+    const int snapshot_size=z80_snapshot_size();
+    assert(snapshot_size>65866 && snapshot_size<100000);
+    std::vector<unsigned char> snapshot(size_t(snapshot_size),0);
+    assert(z80_snapshot_save(snapshot.data(),snapshot_size)==snapshot_size);
+    assert(z80_snapshot_save(snapshot.data(),snapshot_size-1)==-1);
+    assert(z80_step()==1); // HALT
+    assert(z80_write_byte(0x100,0)==0);
+    assert(load(read_file("hello.hex"))==10);
+    assert(z80_snapshot_restore(snapshot.data(),snapshot_size)==0);
+    assert(std::string(z80_state_json())==saved_state);
+    assert(z80_read_byte(0x100)==0x3e);
+    assert(z80_output_length()==0); // no double replay of restored serial transcript
+    z80_output_ptr(); assert(z80_output_length()==0);
+    assert(z80_run_slice(4,-1)==1); // HALT at exact restored PC
+    assert(std::string(z80_state_json()).find("\"rxPending\":1")!=std::string::npos);
+    const std::string before_corruption=z80_state_json();
+    assert(z80_snapshot_restore(snapshot.data(),snapshot_size-1)==-1);
+    assert(std::string(z80_state_json())==before_corruption);
+    snapshot[0]='!';
+    assert(z80_snapshot_restore(snapshot.data(),snapshot_size)==-1);
+    assert(std::string(z80_state_json())==before_corruption);
+    snapshot[0]='Z';
+    assert(z80_snapshot_restore(snapshot.data(),snapshot_size)==0);
+    assert(std::string(z80_state_json())==saved_state);
+    assert(z80_write_byte(0x200,0xdb)==0); // IN A,($01): UART queued Q
+    assert(z80_write_byte(0x201,0x01)==0);
+    assert(z80_set_pc(0x200)==0);
+    assert(z80_step()==1);
+    assert(std::string(z80_state_json()).find("\"a\":81")!=std::string::npos);
+    assert(std::string(z80_state_json()).find("\"rxPending\":0")!=std::string::npos);
+    z80_reset();
+    assert(std::string(z80_state_json()).find("\"pc\":256")!=std::string::npos);
+    std::cout<<"PASS: native browser C ABI, loaders, breakpoints, serial I/O, memory and session snapshots\n";
 }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(z80emu VERSION 0.6.0 LANGUAGES CXX)
+project(z80emu VERSION 0.8.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -24,7 +24,7 @@ if(EMSCRIPTEN)
     "-sENVIRONMENT=worker"
     "-sMIN_SAFARI_VERSION=150000"
     "-sALLOW_MEMORY_GROWTH=1"
-    "-sEXPORTED_FUNCTIONS=['_z80_init','_z80_load','_z80_reset','_z80_step','_z80_run_slice','_z80_set_breakpoint','_z80_set_pc','_z80_clear_breakpoints','_z80_queue_input','_z80_read_byte','_z80_write_byte','_z80_memory_ptr','_z80_state_json','_z80_disassembly','_z80_disassembly_length','_z80_output_ptr','_z80_output_length','_z80_last_error','_malloc','_free']"
+    "-sEXPORTED_FUNCTIONS=['_z80_init','_z80_load','_z80_reset','_z80_step','_z80_run_slice','_z80_set_breakpoint','_z80_set_pc','_z80_clear_breakpoints','_z80_queue_input','_z80_read_byte','_z80_write_byte','_z80_memory_ptr','_z80_snapshot_size','_z80_snapshot_save','_z80_snapshot_restore','_z80_state_json','_z80_disassembly','_z80_disassembly_length','_z80_output_ptr','_z80_output_length','_z80_last_error','_malloc','_free']"
     "-sEXPORTED_RUNTIME_METHODS=['UTF8ToString','HEAPU8']"
   )
   # A single, deployable static-site directory; Python's http.server can
@@ -38,6 +38,7 @@ if(EMSCRIPTEN)
             "${CMAKE_CURRENT_SOURCE_DIR}/web/style.css"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/assembler-source.js"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/assembler-core.mjs"
+            "${CMAKE_CURRENT_SOURCE_DIR}/web/session-format.mjs"
             "${CMAKE_CURRENT_SOURCE_DIR}/THIRD_PARTY_LICENSES.txt"
        DESTINATION "${CMAKE_BINARY_DIR}/site")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/site/examples")
@@ -121,6 +122,7 @@ if(BUILD_TESTING)
   find_program(NODE_EXECUTABLE NAMES node)
   if(NODE_EXECUTABLE)
     add_test(NAME browser_assembler_hex_conversion COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/assembler_core.test.mjs)
+    add_test(NAME browser_session_file_format COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/session_format.test.mjs)
     add_test(NAME browser_worker_breakpoint_continuation
       COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/worker_breakpoint_smoke.cjs)
   endif()
