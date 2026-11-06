@@ -2,6 +2,18 @@
 #include <algorithm>
 
 namespace z80emu {
+SerialConsole::Snapshot SerialConsole::saveState() const {
+    Snapshot s;
+    s.incoming.assign(incoming_.begin(), incoming_.end());
+    s.outgoing = outgoing_;
+    s.transmitted = transmitted_;
+    return s;
+}
+void SerialConsole::restoreState(const Snapshot& saved) {
+    incoming_.assign(saved.incoming.begin(), saved.incoming.end());
+    outgoing_ = saved.outgoing;
+    transmitted_ = saved.transmitted;
+}
 void SerialConsole::reset() { incoming_.clear(); outgoing_.clear(); transmitted_=0; }
 void SerialConsole::queueInput(std::string_view bytes) {
     for(unsigned char byte : bytes) incoming_.push_back(byte);

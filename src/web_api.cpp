@@ -12,6 +12,9 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
+#include <cstring>
+#include <limits>
 
 namespace {
 z80emu::Cpu machine;
@@ -29,6 +32,116 @@ std::string_view format_name(int f) {
                  case 3: return "bin"; default: return ""; }
 }
 void fail(const std::exception& e) { last_error = e.what(); }
+// Snapshot version 1: little-endian, platform-independent, no C++ structure padding.
+// The entire payload is checked before the live CPU is replaced.
+constexpr size_t SNAPSHOT_LIMIT = 1'200'000;
+struct SnapshotWriter {
+    std::vector<uint8_t> data;
+    void byte(uint8_t b) { data.push_back(b); }
+    void number(uint64_t n, int width) {
+        for (int i=0; i<width; ++i) byte(uint8_t(n >> (8*i)));
+    }
+    void bytes(const uint8_t* p, size_t n) { data.insert(data.end(),p,p+n); }
+    void string(const std::string& v) {
+        number(v.size(),4);
+        bytes(reinterpret_cast<const uint8_t*>(v.data()),v.size());
+    }
+};
+struct SnapshotReader {
+    const uint8_t* data;
+    size_t length, offset=0;
+    void need(size_t n) {
+        if (n > length-offset) throw std::runtime_error("Truncated CPU snapshot");
+    }
+    uint64_t number(int width) {
+        need(size_t(width));uint64_t v=0;
+        for (int i=0;i<width;++i) v |= uint64_t(data[offset++]) << (8*i);
+        return v;
+    }
+    void bytes(uint8_t* dest,size_t n) { need(n);std::copy_n(data+offset,n,dest);offset+=n; }
+    std::string string(size_t max) {
+        const uint64_t n=number(4);
+        if(n>max) throw std::runtime_error("Oversized CPU snapshot data");
+        need(size_t(n));
+        const std::string out(reinterpret_cast<const char*>(data+offset),size_t(n));
+        offset+=size_t(n);
+        return out;
+    }
+};
+std::vector<uint8_t> build_snapshot() {
+    const auto uart=machine.console.saveState();
+    if (uart.incoming.size() > 1'000'000 || uart.outgoing.size() > z80emu::SerialConsole::OUTPUT_HISTORY_LIMIT)
+        throw std::runtime_error("Serial queues exceed snapshot limit");
+    SnapshotWriter w;
+    w.data.reserve(66000 + uart.incoming.size() + uart.outgoing.size());
+    for (const uint8_t b : {'Z','8','L','S'}) w.byte(b);
+    w.number(1,2);                // format version
+    w.number(0,4);                // total size patched below
+    w.number(entry,2);
+    w.bytes(machine.mem.data(),machine.mem.size());
+    w.bytes(machine.ports.data(),machine.ports.size());
+    const auto& r=machine.reg;
+    for (const uint8_t b : {r.a,r.f,r.b,r.c,r.d,r.e,r.h,r.l,
+                            r.aa,r.ff,r.bb,r.cc,r.dd,r.ee,r.hh,r.ll}) w.byte(b);
+    for (const uint16_t v : {r.ix,r.iy,r.sp,r.pc}) w.number(v,2);
+    for (const uint8_t b : {r.i,r.r,r.im, uint8_t(r.iff1),uint8_t(r.iff2),uint8_t(r.halted)}) w.byte(b);
+    w.number(machine.output.size(),2);
+    for(const auto& event : machine.output) {w.number(event.port,2);w.byte(event.value);}
+    w.number(machine.instructions,8);
+    w.number(machine.cycles,8);
+    w.number(uart.transmitted,8);
+    w.string(uart.incoming);
+    w.string(uart.outgoing);
+    if (w.data.size()>SNAPSHOT_LIMIT) throw std::runtime_error("CPU snapshot exceeds size limit");
+    const uint32_t size=uint32_t(w.data.size());
+    for(int i=0;i<4;++i)w.data[6+i]=uint8_t(size>>(8*i));
+    return w.data;
+}
+void restore_snapshot(const uint8_t* bytes, size_t length) {
+    if (!bytes || length<65868 || length>SNAPSHOT_LIMIT)
+        throw std::runtime_error("Invalid CPU snapshot length");
+    SnapshotReader r{bytes,length};
+    for (const unsigned char b : {'Z','8','L','S'}) {
+        if(r.number(1)!=b)throw std::runtime_error("Not a Z80/LAB CPU snapshot");
+    }
+    if(r.number(2)!=1)throw std::runtime_error("Unsupported CPU snapshot version");
+    if(r.number(4)!=length)throw std::runtime_error("CPU snapshot size mismatch");
+    const auto saved_entry=uint16_t(r.number(2));
+    z80emu::Cpu replacement;
+    r.bytes(replacement.mem.data(),replacement.mem.size());
+    r.bytes(replacement.ports.data(),replacement.ports.size());
+    auto& x=replacement.reg;
+    for (uint8_t* b : {&x.a,&x.f,&x.b,&x.c,&x.d,&x.e,&x.h,&x.l,
+                        &x.aa,&x.ff,&x.bb,&x.cc,&x.dd,&x.ee,&x.hh,&x.ll}) *b=uint8_t(r.number(1));
+    for (uint16_t* v : {&x.ix,&x.iy,&x.sp,&x.pc}) *v=uint16_t(r.number(2));
+    x.i=uint8_t(r.number(1));x.r=uint8_t(r.number(1));x.im=uint8_t(r.number(1));
+    auto boolean=[&r](){const uint64_t v=r.number(1);if(v>1)throw std::runtime_error("Invalid CPU flag");return v!=0;};
+    x.iff1=boolean();x.iff2=boolean();x.halted=boolean();
+    if(x.im>2)throw std::runtime_error("Invalid interrupt mode");
+    const uint64_t output_count=r.number(2);
+    if(output_count>512) throw std::runtime_error("Invalid port history size");
+    for(size_t i=0;i<output_count;++i) {
+        const auto port=uint16_t(r.number(2));const auto value=uint8_t(r.number(1));
+        replacement.output.push_back({port,value});
+    }
+    replacement.instructions=r.number(8);
+    replacement.cycles=r.number(8);
+    const uint64_t transmitted=r.number(8);
+    z80emu::SerialConsole::Snapshot uart;
+    uart.incoming=r.string(1'000'000);
+    uart.outgoing=r.string(z80emu::SerialConsole::OUTPUT_HISTORY_LIMIT);
+    uart.transmitted=transmitted;
+    if(transmitted<uart.outgoing.size() || r.offset!=length)
+        throw std::runtime_error("Invalid CPU snapshot serial data or trailing bytes");
+    replacement.console.restoreState(uart);
+    machine=std::move(replacement);
+    entry=saved_entry;
+    output_cursor=machine.console.transmittedBytes();
+    pending_output.clear();
+    breakpoints.fill(0);breakpoint_count=0;
+    last_error.clear();
+}
+
 }
 
 extern "C" {
@@ -113,6 +226,26 @@ int z80_write_byte(int address,int value) {
     machine.mem[size_t(address)]=uint8_t(value);return 0;
 }
 int z80_memory_ptr(void) {return static_cast<int>(reinterpret_cast<uintptr_t>(machine.mem.data()));}
+int z80_snapshot_size(void) {
+    try {last_error.clear();return int(build_snapshot().size());}
+    catch(const std::exception& e){fail(e);return -1;}
+}
+int z80_snapshot_save(unsigned char* dest,int capacity) {
+    try {
+        last_error.clear();
+        const auto data=build_snapshot();
+        if(!dest || capacity<0 || size_t(capacity)<data.size())
+            throw std::runtime_error("Snapshot output buffer too small");
+        std::copy(data.begin(),data.end(),dest);
+        return int(data.size());
+    }catch(const std::exception& e){fail(e);return -1;}
+}
+int z80_snapshot_restore(const unsigned char* data,int length) {
+    try {last_error.clear();if(length<0)throw std::runtime_error("Negative CPU snapshot length");
+        restore_snapshot(data,size_t(length));return 0;
+    }catch(const std::exception& e){fail(e);return -1;}
+}
+
 const char* z80_state_json(void) {
     const auto& r=machine.reg;
     std::ostringstream s;

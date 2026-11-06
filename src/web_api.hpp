@@ -21,7 +21,12 @@ int z80_set_pc(int address); // keep RAM/registers, leave HALT and set execution
 int z80_queue_input(const unsigned char* bytes, int length); // byte-oriented UART
 int z80_read_byte(int address);
 int z80_write_byte(int address, int byte);
-int z80_memory_ptr(void); // fixed 65536-byte array; pointer into WebAssembly linear memory
+int z80_memory_ptr(void);
+// Portable little-endian, versioned CPU snapshot; includes RAM, ports,
+// registers, counters, UART queues/history and reset entry. Return -1 on error.
+int z80_snapshot_size(void);
+int z80_snapshot_save(unsigned char* dest, int capacity);
+int z80_snapshot_restore(const unsigned char* data, int length); // fixed 65536-byte array; pointer into WebAssembly linear memory
 const char* z80_state_json(void);
 const char* z80_disassembly(int address); // "0100  21 00 20  LD HL,$2000"
 int z80_disassembly_length(int address);

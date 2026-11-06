@@ -56,6 +56,9 @@ const mockWasm = {
   _z80_read_byte(address){return mem[address];},
   _z80_run_slice(n){let executed=0; while(executed<n && !halted && !bps.has(pc)){oneStep();executed++;}return executed;},
   _z80_step:oneStep,
+  _z80_snapshot_size(){return 65866;},
+  _z80_snapshot_save(){return 65866;},
+  _z80_snapshot_restore(){return 0;},
   _z80_last_error(){return ptr('mock error');},
 };
 
