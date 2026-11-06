@@ -88,3 +88,10 @@ clickable diagnostic which moves the editor caret to that line.
 
 The Z80 C++ core and v0.8 session-file schema are unchanged. See `WEB.md` for
 build instructions and the v0.9 Safari acceptance checklist.
+
+## Release candidate / deployment staging
+
+The release-readiness branch adds a GitHub Actions WebAssembly build with a
+checksum-verified static-site ZIP. See [DEPLOYMENT.md](DEPLOYMENT.md) for the
+private Euler staging procedure and Apache requirements. Nothing is deployed
+to Popper automatically.
