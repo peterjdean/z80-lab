@@ -9,6 +9,7 @@ const sourcePath = path.join(__dirname, '..', 'web', 'worker.js');
 let source = fs.readFileSync(sourcePath, 'utf8');
 source = source.replace(/^import createZ80 from '.\/z80wasm\.mjs';/m,
                         'const createZ80 = async () => mockWasm;');
+source = source.replace(/^import .*source-step\.mjs';/m, '');
 source = source.replace(/import\.meta\.url/g, "'file:///z80lab/worker.js'");
 
 const code = [

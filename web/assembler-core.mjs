@@ -69,11 +69,44 @@ export function emitIntelHex(result) {
     listing:listing.join('\n'), sourceMap:{addressToLine,lineToAddresses,entries}};
 }
 
-export function formatAssemblyError(error) {
-  const items = error?.errors || (error?.error ? [error.error] : [error]);
-  return items.map(item=> {
-    const line = item?.wline?.numline ?? item?.wline?.line ?? item?.line;
-    const message = item?.msg || item?.message || String(item);
-    return `${line!=null?`Line ${line}: `:''}${message}`;
-  }).join('\n');
+// Prefer ASM80's structured source location. Its unknown-instruction error can
+// lack usable line metadata, however, so resolve that specific opcode only if
+// it occurs on exactly one actual instruction line in this single-file source.
+// Never guess between duplicate occurrences or parse arbitrary message text.
+function uniqueOpcodeLine(message, source) {
+  if (typeof source !== 'string') return null;
+  const found = /(?:unrecognized|unknown)\s+(?:instruction|opcode)\s+([A-Za-z_.@$][\w.$@]*)/i.exec(message);
+  if (!found) return null;
+  const wanted = found[1].toUpperCase();
+  let unique = null;
+  for (const [index, raw] of source.split(/\r?\n/).entries()) {
+    // Ignore comments; allow an optional label preceding the instruction.
+    const text = raw.trimStart();
+    if (!text || text.startsWith(';')) continue;
+    const candidate = /^(?:[A-Za-z_.@$][\w.$@]*:\s*)?([A-Za-z_.@$][\w.$@]*)\b/.exec(text);
+    if (candidate?.[1]?.toUpperCase() !== wanted) continue;
+    if (unique !== null) return null; // Ambiguous, do not fabricate a location.
+    unique = index + 1;
+  }
+  return unique;
+}
+
+export function extractAssemblyDiagnostics(error, source=null) {
+  const items=error?.errors || (error?.error ? [error.error] : [error]);
+  return items.map(item=>{
+    const rawLine=item?.wline?.numline ?? item?.s?.numline ??
+      item?.location?.line ?? item?.lineNumber ?? item?.wline?.line ?? item?.line;
+    const rawMessage=item?.msg || item?.message || String(item);
+    const text=String(rawMessage);
+    const prefix=text.match(/^Line\s+(\d+):\s*/i);
+    const numbered=Number(rawLine);
+    const known=Number.isInteger(numbered)&&numbered>0?numbered:
+      prefix?Number(prefix[1]):null;
+    const message=prefix?text.slice(prefix[0].length):text;
+    return {line:known??uniqueOpcodeLine(message,source),message};
+  });
+}
+export function formatAssemblyError(error, source=null) {
+  return extractAssemblyDiagnostics(error,source).map(({line,message})=>
+    `${line!==null?`Line ${line}: `:''}${message}`).join('\n');
 }

@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT=Path(__file__).resolve().parents[1]
 HTML=(ROOT/'web/index.html').read_text().replace('<script type="module" src="app.js"></script>', '')
-APP=(ROOT/'web/app.js').read_text().replace("new URL('./worker.js', import.meta.url)","'worker.js'")
+APP=(ROOT/'web/app.js').read_text().replace("import {extractAssemblyDiagnostics} from './assembler-core.mjs';",'const extractAssemblyDiagnostics=()=>[];').replace("new URL('./worker.js', import.meta.url)","'worker.js'")
 APP=APP.replace("import('./session-format.mjs')",'Promise.resolve(window._codec)')
 result={
  'hex':':050100003E41D30076CC\n:00000001FF\n',

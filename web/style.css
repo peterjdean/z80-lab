@@ -104,3 +104,17 @@ button.asm-gutter-line.source-current.source-breakpoint{background:#674139;color
 .session-controls .filelabel:hover{background:#273b4c}
 #session-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .session-controls .filelabel:focus-within{outline:2px solid #23baaa}
+
+
+/* v0.9 source stepping and line-oriented assembly diagnostics. */
+#source-step{border-color:#327f77;background:#163b3b;color:#c3f5e9}
+#source-step:disabled{opacity:.43;cursor:not-allowed}
+#asm-highlight .asm-source-line.source-error{background:#482c35;box-shadow:inset 3px 0 #f08084}
+.asm-gutter-line.source-error{color:#ffc4b9;background:#593337}
+.asm-gutter-line.source-error.source-current{background:#734e45;color:#fff0dd}
+.asm-diagnostics{margin-top:8px;display:flex;flex-direction:column;gap:5px;max-height:125px;overflow:auto}
+.asm-diagnostics:empty{display:none}
+.asm-diagnostic{display:block;text-align:left;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;
+  color:#ffd0c6;background:#3d242b;border:1px solid #85494c;border-radius:6px;
+  padding:5px 9px;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
+.asm-diagnostic:hover,.asm-diagnostic:focus-visible{background:#61353b;outline-color:#f5a09c}

@@ -44,6 +44,7 @@ with sync_playwright() as p:
     page.add_script_tag(content=mock)
     page.evaluate('window.fetch=async()=>({ok:true,arrayBuffer:async()=>new Uint8Array([0]).buffer})')
     app = APP.read_text().replace("new URL('./worker.js', import.meta.url)", "'worker.js'")
+    app=app.replace("import {extractAssemblyDiagnostics} from './assembler-core.mjs';", "const extractAssemblyDiagnostics=()=>[];")
     page.add_script_tag(content=app)
     page.get_by_text('10 bytes loaded. Ready to execute.').wait_for()
     page.locator('#breakpoint').fill('0103')

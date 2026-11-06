@@ -1,5 +1,6 @@
 // Z80 engine runs in a module worker; no WASM threads or SharedArrayBuffer.
 import createZ80 from './z80wasm.mjs';
+import {makeSourceLineLookup, sourceStepOutcome, SOURCE_STEP_LIMIT} from './source-step.mjs';
 
 let wasm;
 let running = false;
@@ -15,6 +16,7 @@ let epochCycles = 0;
 let lastSnapshot = 0;
 let lastTickTime = 0;
 let stopReason = '';
+let sourceStepping = null;
 
 const validAddress = n => Number.isInteger(n) && n >= 0 && n <= 0xffff;
 const hex4 = n => n.toString(16).toUpperCase().padStart(4, '0');
@@ -50,6 +52,7 @@ function snapshot() {
   lastSnapshot=performance.now();
 }
 function stop() {
+  sourceStepping=null;
   running=false;
   if (scheduled!==null) clearTimeout(scheduled);
   scheduled=null;
@@ -94,6 +97,33 @@ function tick() {
   } catch(error) {
     stop();stopReason='error';sendError(error);snapshot();
   }
+}
+// Cooperative source stepping: yield between batches so Pause remains responsive.
+function sourceStepTick() {
+  scheduled=null;
+  const work=sourceStepping;
+  if(!running||!work)return;
+  try {
+    const began=performance.now();
+    for(let batch=0;batch<256;batch++) {
+      const n=wasm._z80_step();
+      if(n<0)throw new Error(asText(wasm._z80_last_error()));
+      work.steps++;
+      const st=state();
+      const result=sourceStepOutcome({startLine:work.startLine,
+        addressToLine:work.lines,pc:st.pc,halted:!!st.halted,
+        breakpoints,steps:work.steps});
+      if(result) {
+        stop();stopReason=result;
+        if(result==='breakpoint')info(`Breakpoint reached at $${hex4(st.pc)}.`);
+        else if(result==='unmapped')info(`Source step stopped at $${hex4(st.pc)} (no source mapping).`);
+        else if(result==='source-step-limit')info(`Source step paused after ${SOURCE_STEP_LIMIT.toLocaleString()} instructions on one source line.`);
+        snapshot();return;
+      }
+      if(batch%32===31 && performance.now()-began>=7)break;
+    }
+    if(running&&sourceStepping)scheduled=setTimeout(sourceStepTick,0);
+  }catch(error){stop();stopReason='error';sendError(error);snapshot();}
 }
 function allocBytes(bytes, callback) {
   const ptr=wasm._malloc(bytes.length||1);
@@ -175,6 +205,27 @@ function acceptMessage(event) {
         stop();const n=wasm._z80_step();
         if(n<0) throw new Error(asText(wasm._z80_last_error()));
         stopReason=state().halted?'halted':'step';snapshot();break;
+      }
+      case 'source-step': {
+        if(running)break;
+        const st=state();
+        if(st.halted){snapshot();break;}
+        // The browser sends only the addresses of the currently loaded source.
+        // No mapping? Execute one CPU instruction rather than guessing.
+        const lines=makeSourceLineLookup(msg.entries);
+        if(!lines.has(st.pc)) {
+          stop();
+          const n=wasm._z80_step();
+          if(n<0)throw new Error(asText(wasm._z80_last_error()));
+          stopReason=state().halted?'halted':'unmapped';
+          info(`No source mapping at $${hex4(st.pc)}; stepped one Z80 instruction.`);
+          snapshot();break;
+        }
+        stop();
+        sourceStepping={lines,startLine:lines.get(st.pc),steps:0};
+        running=true;stopReason='';snapshot();
+        scheduled=setTimeout(sourceStepTick,0);
+        break;
       }
       case 'run': {
         if(running) break;

@@ -1,8 +1,8 @@
 // ASM80 is a third-party MIT-licensed Z80 assembler, built into this site's
 // own static JS bundle at release time; no browser CDN/network dependency.
 import {compile} from '@asm80/core';
-import {emitIntelHex, formatAssemblyError} from './assembler-core.mjs';
-export {emitIntelHex, formatAssemblyError};
+import {emitIntelHex, formatAssemblyError, extractAssemblyDiagnostics} from './assembler-core.mjs';
+export {emitIntelHex, formatAssemblyError, extractAssemblyDiagnostics};
 export async function assembleZ80(source) {
   if (typeof source !== 'string' || source.length>200_000)
     throw new Error('Assembly source must be text and at most 200 KB.');
@@ -15,6 +15,10 @@ export async function assembleZ80(source) {
   let result;
   try {
     result = await compile(source,noFiles,{assembler:'z80'},'main.z80');
-  } catch(error) {throw new Error(formatAssemblyError(error));}
+  } catch(error) {
+    const wrapped=new Error(formatAssemblyError(error,source));
+    wrapped.diagnostics=extractAssemblyDiagnostics(error,source);
+    throw wrapped;
+  }
   return emitIntelHex(result);
 }

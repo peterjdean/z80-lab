@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emitIntelHex,formatAssemblyError} from '../web/assembler-core.mjs';
+import {emitIntelHex,formatAssemblyError,extractAssemblyDiagnostics} from '../web/assembler-core.mjs';
 function decodeHex(text){
   const mem=new Map();let entry=-1, eof=false;
   for(const line of text.trim().split('\n')){
@@ -68,4 +68,41 @@ test('source map supports discontinuous regions and missing or included-line met
   assert.deepEqual(result.sourceMap.lineToAddresses[9],[0x2000]);
   assert.equal(result.sourceMap.addressToLine[0x3000],undefined);
   assert.equal(result.sourceMap.addressToLine[0x3001],undefined);
+});
+
+test('assembler diagnostics preserve structured source line and message',()=>{
+  const errors={errors:[{msg:'Unknown opcode',wline:{numline:7}},
+                        {message:'Out of range',wline:{numline:11}}]};
+  assert.deepEqual(extractAssemblyDiagnostics(errors),[
+    {line:7,message:'Unknown opcode'},{line:11,message:'Out of range'}]);
+  assert.equal(formatAssemblyError(errors),'Line 7: Unknown opcode\nLine 11: Out of range');
+});
+test('formatted and unlocated errors are handled without fabricated lines',()=>{
+  assert.deepEqual(extractAssemblyDiagnostics(new Error('Line 12: Bad mnemonic')),
+    [{line:12,message:'Bad mnemonic'}]);
+  assert.deepEqual(extractAssemblyDiagnostics(new Error('Unexpected failure')),
+    [{line:null,message:'Unexpected failure'}]);
+});
+
+
+test('unlocated ASM80 unknown instruction resolves to a unique source line',()=>{
+  const source=`        ORG $0100
+        LD B,16
+        LD A,'A'
+LOOP:   OUT ($00),A
+        INC A
+        FAKEOP A,B
+        DJNZ LOOP
+        HALT`;
+  const error={error:{msg:'Unrecognized instruction FAKEOP'}};
+  assert.deepEqual(extractAssemblyDiagnostics(error,source),[
+    {line:6,message:'Unrecognized instruction FAKEOP'}]);
+  assert.equal(formatAssemblyError(error,source),'Line 6: Unrecognized instruction FAKEOP');
+});
+test('opcode fallback does not fabricate a location for duplicates or comments',()=>{
+  const error={error:{msg:'Unrecognized instruction FAKEOP'}};
+  assert.equal(extractAssemblyDiagnostics(error,'FAKEOP A\nFAKEOP B')[0].line,null);
+  assert.equal(extractAssemblyDiagnostics(error,'; FAKEOP A\nLD A,1')[0].line,null);
+  assert.equal(extractAssemblyDiagnostics(error,'OTHER: FAKEOP A\nHALT')[0].line,1);
+  assert.equal(extractAssemblyDiagnostics(error,'DB "FAKEOP"\nHALT')[0].line,null);
 });

@@ -1,4 +1,4 @@
-# Z80/LAB — Safari-compatible browser development environment (v0.8)
+# Z80/LAB — Safari-compatible browser development environment (v0.9)
 
 The v0.6 baseline added a third-party ASM80 browser assembler, a source editor,
 assembler diagnostics, a machine-code listing, save/open `.asm` and download
@@ -161,3 +161,52 @@ Tests: `ctest --test-dir build --output-on-failure` runs the native binary
 snapshot round-trip tests. `npm run test:assembler` now also runs the portable
 session file format validation tests. An actual Emscripten/Safari build must
 be verified on Euler.
+
+
+## v0.9 — source stepping, shortcuts, and assembler error locations
+
+* **Step source** (F11 or Shift+F10) is enabled after successful **Assemble &
+  load**. It advances from the current assembly line until a *different*
+  mapped line, a breakpoint, HALT, or an unmapped destination is reached.
+  Unlike a subroutine "step over", this follows a CALL into its destination.
+* Individual source lines that expand into several machine instructions run
+  through the expansion before stopping at the next line. A loop that stays on
+  the same line is limited to 20,000 executed instructions; the Worker yields
+  between batches so Pause can interrupt.
+* F5 runs, Shift+F5 pauses, F10 steps one instruction; Command/Ctrl+Enter
+  assembles and loads even when the source editor is focused. Safari/macOS
+  may require pressing Fn with function keys. The buttons remain available.
+* ASM80 error messages containing a valid line number are shown immediately
+  under the source editor. The offending line is highlighted and clicking its
+  diagnostic moves the caret there. Editing source clears the markers.
+* Source stepping is disabled when the source map is invalidated by edits or
+  loading different machine code. Sessions remain compatible with v0.8.
+
+### Verify on Euler before committing v0.9
+
+1. From `feature/source-stepping`, build the native tests and WebAssembly site
+   using the established `bash scripts/build_euler_web.sh` script; confirm
+   all checks succeed.
+2. Restart the Python server from `build-wasm/site`, then hard-reload Safari
+   (Option-Command-R). The **Step source** button appears beside **Step**.
+3. Load **Alphabet loop** and Assemble & load. With PC=$0100, click Step source:
+   PC should advance to $0102 (LD A,'A'); click again to reach $0104
+   (OUT ($00),A). The highlighted editor line should follow.
+4. Set a breakpoint on the INC A line ($0106) and click Step source from
+   $0104. Execution must stop at $0106 **before** INC A; A should be $41 and
+   the serial terminal should contain `A`. Click Step source again and
+   confirm it advances to $0107, with A=$42.
+5. Place the editor cursor within the source text and use F11 (or Shift+F10)
+   to step. Press Command+Enter to assemble. For macOS keyboards, Fn may be
+   needed with the F-keys.
+6. Insert `FAKEOP A,B` on a fresh line, assemble, and confirm a readable
+   diagnostic with a red source-line marker. Click the diagnostic and confirm
+   the editor caret jumps to the error line. Fix the source and confirm the
+   marker clears. The rejected assembly must not overwrite CPU memory.
+7. Save/Open an existing v0.8 `.z80session` and verify resumed execution,
+   source mapping, breakpoints and terminal behaviour still work.
+
+Automated tests: `ctest --test-dir build --output-on-failure`,
+`npm run test:assembler`, and (where Playwright/Chromium are installed)
+`python3 tests/source_step_ui_smoke.py`. The real Safari test is required
+because the local UI smoke test uses a mocked Web Worker and assembler.

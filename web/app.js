@@ -1,4 +1,5 @@
 // Browser controller: all emulation runs in a dedicated WASM Web Worker.
+import {extractAssemblyDiagnostics} from './assembler-core.mjs';
 const $ = id => document.getElementById(id);
 const worker = new Worker(new URL('./worker.js', import.meta.url), {type:'module'});
 const encoder = new TextEncoder();
@@ -10,12 +11,14 @@ let pendingSession=null;
 let sessionRequestId=0;
 function sessionBusy(busy) {
   $('session-save').disabled=busy||!ready;
+  if(busy)$('source-step').disabled=true;
   $('session-open').classList.toggle('busy',busy);
   $('session-file').disabled=busy;
 }
 let loadedSourceMap=null;
 let sourcePcLine=null;
 let sourceBreakpointAddresses=new Set();
+let assemblyDiagnostics=[];
 let viewingMemory=0x2000;
 const toHex=(n,width=2)=>Number(n).toString(16).toUpperCase().padStart(width,'0');
 const flagBit=(f,mask)=>f&mask?'1':'0';
@@ -62,6 +65,7 @@ function render(data) {
   $('status').className=st.halted?'pill halted':running?'pill running':'pill';
   $('run').disabled=running||st.halted;
   $('step').disabled=running||st.halted;
+  $('source-step').disabled=running||st.halted||!loadedSourceMap||!!pendingSession;
   $('pause').disabled=!running;
   $('disasm-mode').textContent=followingPC?'Following PC · click to break':`Browsing $${toHex(disasmAddress,4)}`;
   $('disasm-back').disabled=!canDisasmBack;
@@ -114,6 +118,7 @@ worker.onmessage = event=>{
     ready=true;
     for(const el of wasmControls)el.disabled=false;
     sessionBusy(false);
+    $('source-step').disabled=true;
     notice('Z80 ready. Load a sample or local HEX file.');
     $('sample').value='examples/hello.hex';
     loadSample('examples/hello.hex');
@@ -159,6 +164,7 @@ worker.onmessage = event=>{
     $('asm-hex-save').disabled=!assembled;
     $('asm-status').classList.remove('error');
     $('asm-status').textContent=assembled?'Assembly listing restored from session.':'Source restored from session.';
+    setDiagnostics([]);
     $('clock').value=String(pending.debugger.clock);
     $('asm-debug-status').textContent=loadedSourceMap?'Source mapping restored.':'Assemble & load to enable source debugging.';
     paintEditor();
@@ -230,6 +236,10 @@ $('file').addEventListener('change',async e=>{
 $('run').addEventListener('click',()=>send({type:'run'}));
 $('pause').addEventListener('click',()=>send({type:'pause'}));
 $('step').addEventListener('click',()=>send({type:'step'}));
+$('source-step').addEventListener('click',()=>{
+  if(!ready||!loadedSourceMap||!current||current.halted||$('source-step').disabled)return;
+  send({type:'source-step',entries:loadedSourceMap.entries.map(({address,line})=>({address,line}))});
+});
 $('reset').addEventListener('click',()=>{serial='';$('terminal').textContent='';send({type:'reset'});});
 $('clock').addEventListener('change',e=>send({type:'clock',value:Number(e.target.value)}));
 $('breakpoint-set').addEventListener('click',()=>{
@@ -270,10 +280,19 @@ $('serial-form').addEventListener('submit',event=>{
   send({type:'input',bytes:encoder.encode(value+'\r')});
   $('serial-input').value='';
 });
+// Shortcuts work even with the assembly editor focused. The browser may
+// reserve some function keys on macOS; Shift+F10 is an alternate source step.
 document.addEventListener('keydown',event=>{
-  if(event.target.matches('input,textarea,select,button'))return;
-  if(event.key==='F10'){event.preventDefault();send({type:'step'});}
-  if(event.key==='F5'){event.preventDefault();send({type:'run'});}
+  if(event.repeat)return;
+  if((event.metaKey||event.ctrlKey)&&!event.altKey&&event.key==='Enter'){
+    event.preventDefault();$('asm-assemble').click();return;
+  }
+  if(event.metaKey||event.ctrlKey||event.altKey)return;
+  let control=null;
+  if(event.key==='F5')control=event.shiftKey?'pause':'run';
+  else if(event.key==='F10')control=event.shiftKey?'source-step':'step';
+  else if(event.key==='F11'&&!event.shiftKey)control='source-step';
+  if(control){event.preventDefault();$(control).click();}
 });
 
 // Set PC is deliberately independent of editing RAM.
@@ -394,35 +413,65 @@ function updateSourceDebugger(pc,running=false) {
     syncEditorScroll();
   }
 }
+function jumpToSourceLine(line){
+  const lines=source.value.split('\n');
+  if(!Number.isInteger(line)||line<1||line>lines.length)return;
+  let offset=0;
+  for(let i=0;i<line-1;i++)offset+=lines[i].length+1;
+  source.focus();source.setSelectionRange(offset,offset);
+  source.scrollTop=Math.max(0,(line-1)*20-source.clientHeight/2+10);
+  syncEditorScroll();
+}
+function setDiagnostics(items){
+  assemblyDiagnostics=(Array.isArray(items)?items:[]).filter(d=>d&&
+    Number.isInteger(d.line)&&d.line>=1&&typeof d.message==='string').slice(0,50);
+  const target=$('asm-diagnostics');
+  target.replaceChildren(...assemblyDiagnostics.map(d=>{
+    const el=document.createElement('button');
+    el.type='button';el.className='asm-diagnostic';
+    el.textContent=`Line ${d.line}: ${d.message}`;
+    el.addEventListener('click',()=>jumpToSourceLine(d.line));
+    return el;
+  }));
+  if(assemblyDiagnostics.length)target.setAttribute('aria-label','Assembler errors by source line');
+  paintEditor();
+}
 function paintEditor(){
   const lines=source.value.split('\n');
-  highlighted.innerHTML=lines.map(line=>`<span class="asm-source-line">${paintCode(line)||' '}</span>`).join('\n')+'\n';
+  const errors=new Set(assemblyDiagnostics.map(d=>d.line));
+  highlighted.innerHTML=lines.map((line,i)=>`<span class="asm-source-line${errors.has(i+1)?' source-error':''}">${paintCode(line)||' '}</span>`).join('\n')+'\n';
   lineNumbers.replaceChildren(...lines.map((_,i)=>{
     const addresses=loadedSourceMap?.lineToAddresses?.[i+1]||[];
-    const el=document.createElement(addresses.length?'button':'span');
-    el.className='asm-gutter-line';el.textContent=String(i+1);
+    const isError=errors.has(i+1);
+    const el=document.createElement(addresses.length||isError?'button':'span');
+    el.className='asm-gutter-line'+(isError?' source-error':'');el.textContent=String(i+1);
     if(addresses.length){
       el.type='button';
       el.title=`Toggle breakpoint at $${toHex(addresses[0],4)} (source line ${i+1})`;
       el.setAttribute('aria-label',el.title);
       el.addEventListener('click',()=>send({type:'breakpoint-toggle',address:addresses[0]}));
+    } else if(isError){
+      el.type='button';el.title=`Go to assembler error on line ${i+1}`;
+      el.setAttribute('aria-label',el.title);
+      el.addEventListener('click',()=>jumpToSourceLine(i+1));
     }
     return el;
   }));
   syncEditorScroll();
   if(current)updateSourceDebugger(current.pc,false);
+  $('source-step').disabled=!ready||!loadedSourceMap||!current||current.halted||!!pendingSession;
 }
 function syncEditorScroll(){
   highlighted.scrollTop=source.scrollTop;
   highlighted.scrollLeft=source.scrollLeft;
   lineNumbers.scrollTop=source.scrollTop;
 }
-source.addEventListener('input',()=>{assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();});
+source.addEventListener('input',()=>{setDiagnostics([]);assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();});
 source.addEventListener('scroll',syncEditorScroll);
 source.addEventListener('keydown',event=>{
   if(event.key!=='Tab')return;
   event.preventDefault();const start=source.selectionStart,end=source.selectionEnd;
-  source.setRangeText('    ',start,end,'end');assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
+  source.setRangeText('    ',start,end,'end');setDiagnostics([]);assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
 });
 source.value=assemblyExamples.print;paintEditor();
 function downloadText(name,text,mime='text/plain'){
@@ -434,14 +483,14 @@ function downloadText(name,text,mime='text/plain'){
 }
 $('asm-example-load').addEventListener('click',()=>{
   source.value=assemblyExamples[$('asm-example').value]||assemblyExamples.print;
-  assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
+  setDiagnostics([]);assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
   $('asm-status').textContent='Example loaded. Assemble & load to run.';
 });
 $('asm-file').addEventListener('change',async event=>{
   const file=event.target.files[0];if(!file)return;
   try{
     if(file.size>200_000)throw new Error('Assembly source exceeds 200 KB.');
-    source.value=await file.text();assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
+    source.value=await file.text();setDiagnostics([]);assembled=null;$('asm-hex-save').disabled=true;clearSourceMap();
     $('asm-status').textContent=`Opened ${file.name} locally.`;
   }catch(error){$('asm-status').textContent=error.message;$('asm-status').classList.add('error');}
 });
@@ -452,6 +501,7 @@ $('asm-hex-save').addEventListener('click',()=>{
 $('asm-assemble').addEventListener('click',async()=>{
   if(!ready)return;
   $('asm-status').classList.remove('error');
+  setDiagnostics([]);
   $('asm-status').textContent='Assembling…';
   pendingAssembly=null;
   $('asm-assemble').disabled=true;
@@ -476,6 +526,7 @@ $('asm-assemble').addEventListener('click',async()=>{
     assembled=null;$('asm-hex-save').disabled=true;
     $('asm-status').classList.add('error');
     $('asm-status').textContent=error.message;
+    setDiagnostics(error.diagnostics||extractAssemblyDiagnostics(error));
     $('asm-listing').textContent=`Assembly failed:\n${error.message}`;
   }finally{$('asm-assemble').disabled=false;}
 });
