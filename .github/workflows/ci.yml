@@ -30,3 +30,45 @@ jobs:
         run: npm run test:assembler
       - name: Bundle browser assembler for Safari 15+
         run: npm run build:assembler -- /tmp/z80-lab-assembler.js
+
+  web-site:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned Emscripten compiler
+        uses: emscripten-core/setup-emsdk@v15
+        with:
+          version: '4.0.23'
+      - name: Install locked JavaScript dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build WebAssembly
+        run: |
+          emcc --version
+          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-wasm --parallel 2
+      - name: Build self-hosted ASM80 bundle and validate static site
+        run: |
+          npm run build:assembler
+          npm run test:assembler
+          python3 scripts/check_web.py --site build-wasm/site
+      - name: Test strict static-site packaging
+        run: python3 -m unittest discover -s tests -p test_package_site.py -v
+      - name: Create ZIP release candidate and SHA256 checksum
+        run: python3 scripts/package_site.py --site build-wasm/site --output dist/z80-lab-site.zip --revision "$GITHUB_SHA"
+      - name: Verify packaged archive checksum
+        run: cd dist && sha256sum -c z80-lab-site.zip.sha256
+      - name: Upload downloadable static site (not an automatic deployment)
+        uses: actions/upload-artifact@v4
+        with:
+          name: z80-lab-static-site
+          path: |
+            dist/z80-lab-site.zip
+            dist/z80-lab-site.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
