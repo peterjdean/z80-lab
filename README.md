@@ -104,3 +104,11 @@ generated Intel HEX or debugger source mapping. Session downloads are named
 `z80-lab-session-YYYYMMDD-HHMMSS-mmm.z80session` (UTC). The session opener
 does not filter filenames, so Safari's older `.z80session-2` downloads remain
 selectable; the existing strict content/size checks still run before restore.
+
+## Public deployment hardening (pre-v1.0)
+
+The staging workflow now includes strict release verification, versioned
+static-site directories, atomic promotion/rollback and an Apache stage template
+with no-store caching and an enforced same-origin CSP for Safari 16+.
+See [PUBLIC_DEPLOYMENT.md](PUBLIC_DEPLOYMENT.md). This workflow does not
+change public DNS, certificates, ports, or existing production virtual hosts.
