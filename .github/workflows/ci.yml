@@ -59,6 +59,8 @@ jobs:
           python3 scripts/check_web.py --site build-wasm/site
       - name: Test strict static-site packaging
         run: python3 -m unittest discover -s tests -p test_package_site.py -v
+      - name: Test atomic stage install, checksum validation and rollback
+        run: python3 -m unittest discover -s tests -p test_stage_release.py -v
       - name: Create ZIP release candidate and SHA256 checksum
         run: python3 scripts/package_site.py --site build-wasm/site --output dist/z80-lab-site.zip --revision "$GITHUB_SHA"
       - name: Verify packaged archive checksum
