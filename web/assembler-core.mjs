@@ -39,7 +39,16 @@ export function emitIntelHex(result) {
     const label = row.label ? `${row.label}: ` : '';
     const params=Array.isArray(row.params)?row.params.join(', '):String(row.params ?? '');
     const operation = row.opcode ? `${row.opcode} ${params}` : '';
-    listing.push(`${start.toString(16).toUpperCase().padStart(4,'0')}  ${bytes.map(x=>x.toString(16).toUpperCase().padStart(2,'0')).join(' ').padEnd(24)}  ${label}${operation}`.trimEnd());
+    // Keep the hex column a fixed width. Long DB/DW rows continue on separate
+    // addressed lines, with the source statement shown only on the first row.
+    // This changes presentation only; Intel HEX and source mapping use all bytes.
+    for (let offset=0;offset<bytes.length;offset+=8) {
+      const chunk=bytes.slice(offset,offset+8);
+      const hex=chunk.map(x=>x.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+      const address=(start+offset).toString(16).toUpperCase().padStart(4,'0');
+      const sourceText=offset===0 ? `${label}${operation}` : '';
+      listing.push(`${address}  ${hex.padEnd(24)}  ${sourceText}`.trimEnd());
+    }
   }
   if (memory.size===0) throw new Error('No machine-code bytes were generated.');
   // The first emitted byte is the default entry. Optionally honour an explicit

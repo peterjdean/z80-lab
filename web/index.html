@@ -27,8 +27,8 @@
     <section class="sessionbar" aria-label="Save or restore an emulator session">
       <div><strong>Session</strong><span>Keep your CPU, RAM, source, breakpoints and terminal together</span></div>
       <div class="session-controls"><button id="session-save" data-requires-wasm disabled>Save session</button>
-        <label class="filelabel" id="session-open" for="session-file">Open session</label>
-        <input id="session-file" type="file" accept=".z80session,.json" data-requires-wasm disabled /></div>
+        <label class="filelabel" id="session-open" for="session-file" title="Choose a Z80/LAB session, including files renamed by Safari; content is validated before loading">Open session</label>
+        <input id="session-file" type="file" data-requires-wasm disabled /></div>
     </section>
 
     <div class="panels">

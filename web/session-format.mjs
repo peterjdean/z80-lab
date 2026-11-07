@@ -2,6 +2,18 @@
 // CPU binary is validated again by the native API before state is replaced.
 export const SESSION_FORMAT = 'z80-lab-session';
 export const SESSION_VERSION = 1;
+
+// Safari may append a suffix after the entire extension for duplicate
+// downloads (for example ".z80session-2"). Distinct, timestamped names reduce
+// collisions while keeping the valid .z80session suffix at the very end.
+// The timestamp is UTC and includes milliseconds.
+export function sessionDownloadName(date=new Date()) {
+  const iso=date.toISOString();
+  return 'z80-lab-session-' +
+    iso.slice(0,10).replace(/-/g,'') + '-' +
+    iso.slice(11,19).replace(/:/g,'') + '-' +
+    iso.slice(20,23) + '.z80session';
+}
 const MAX_FILE_CHARS = 2_500_000;
 const MAX_CPU_BYTES = 1_200_000;
 const address = n => Number.isInteger(n) && n >= 0 && n <= 65535;

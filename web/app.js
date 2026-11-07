@@ -138,12 +138,12 @@ worker.onmessage = event=>{
     if(!pending||pending.kind!=='save'||pending.id!==data.requestId)return;
     (async()=>{
       try {
-        const {encodeSession}=await import('./session-format.mjs');
+        const {encodeSession,sessionDownloadName}=await import('./session-format.mjs');
         const workspace={source:source.value,serial,assembled:assembled||null,
           mapActive:!!loadedSourceMap};
         const json=encodeSession({bytes:new Uint8Array(data.bytes),
           debugger:data.debugger,workspace});
-        downloadText('z80-lab-session.z80session',json,'application/json');
+        downloadText(sessionDownloadName(),json,'application/json');
         notice('Session saved locally. The Z80 is paused; Run to continue.');
       } catch(e){notice(`Session save failed: ${e.message}`,true);}
       finally {pendingSession=null;sessionBusy(false);}

@@ -106,3 +106,23 @@ test('opcode fallback does not fabricate a location for duplicates or comments',
   assert.equal(extractAssemblyDiagnostics(error,'OTHER: FAKEOP A\nHALT')[0].line,1);
   assert.equal(extractAssemblyDiagnostics(error,'DB "FAKEOP"\nHALT')[0].line,null);
 });
+
+test('long DB data is displayed on eight-byte continuation rows without altering output',()=>{
+  const bytes=[...Buffer.from('Hello from Z80/LAB!','ascii'),13,10,0];
+  const result=emitIntelHex({dump:[{
+    addr:0x010d,numline:10,label:'MESSAGE',opcode:'DB',
+    params:['"Hello from Z80/LAB!"','13','10','0'],lens:bytes
+  }],opts:{}});
+  const lines=result.listing.split('\n');
+  assert.equal(lines.length,Math.ceil(bytes.length/8));
+  assert.match(lines[0],/^010D  48 65 6C 6C 6F 20 66 72 +MESSAGE: DB "Hello from Z80\/LAB!"/);
+  for(let i=1;i<lines.length;i++){
+    assert.match(lines[i],new RegExp('^'+(0x010d+i*8).toString(16).toUpperCase().padStart(4,'0')+'  '));
+    assert.doesNotMatch(lines[i],/MESSAGE:|DB /);
+  }
+  assert.equal(result.listing.match(/MESSAGE: DB/g)?.length,1);
+  const parsed=decodeHex(result.hex);
+  assert.deepEqual([...bytes].map((_,i)=>parsed.mem.get(0x010d+i)),bytes);
+  assert.equal(result.sourceMap.entries.length,1);
+  assert.deepEqual(result.sourceMap.entries[0],{address:0x010d,line:10,length:bytes.length});
+});
