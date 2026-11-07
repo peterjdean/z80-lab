@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {encodeSession,decodeSession} from '../web/session-format.mjs';
+import {encodeSession,decodeSession,sessionDownloadName} from '../web/session-format.mjs';
 
 function fixture() {
   const bytes=new Uint8Array(65868);
@@ -41,4 +41,12 @@ test('session may have source without assembled code and unchanged UART',()=>{
   const restored=decodeSession(encodeSession(initial));
   assert.equal(restored.workspace.assembled,null);
   assert.equal(restored.workspace.mapActive,false);
+});
+
+test('session downloads have readable unique UTC timestamps and a valid final extension',()=>{
+  const first=sessionDownloadName(new Date('2026-11-07T12:23:15.123Z'));
+  const second=sessionDownloadName(new Date('2026-11-07T12:23:15.124Z'));
+  assert.equal(first,'z80-lab-session-20261107-122315-123.z80session');
+  assert.equal(second,'z80-lab-session-20261107-122315-124.z80session');
+  assert.notEqual(first,second);
 });

@@ -34,12 +34,16 @@ window._codec={
   encodeSession:({bytes,debugger:settings,workspace})=>{
     const json=JSON.stringify({bytes:[...bytes],debugger:settings,workspace});
     window._latestJson=json;return json;},
+  sessionDownloadName:()=> 'z80-lab-session-20261107-122315-123.z80session',
   decodeSession:text=>{const saved=JSON.parse(text);
     return {bytes:new Uint8Array(saved.bytes),debugger:saved.debugger,workspace:saved.workspace};}
 };
 URL.createObjectURL=()=> 'blob:mock';
 URL.revokeObjectURL=()=>{};
-HTMLAnchorElement.prototype.click=function(){window._downloads=(window._downloads||0)+1;};
+HTMLAnchorElement.prototype.click=function(){
+  window._downloads=(window._downloads||0)+1;
+  window._downloadName=this.download;
+};
 window.Worker=class {
   constructor(){window._worker=this;setTimeout(()=>this.onmessage({data:{type:'ready'}}),0)}
   snapshot(output=''){
@@ -103,6 +107,10 @@ with sync_playwright() as p:
     page.locator('#session-save').click()
     page.get_by_text('Session saved locally. The Z80 is paused; Run to continue.').wait_for()
     assert page.evaluate('window._downloads')==1
+    assert page.evaluate('window._downloadName')=='z80-lab-session-20261107-122315-123.z80session'
+    # Safari's duplicate filenames may end in .z80session-2. Do not filter
+    # these from the native picker; decodeSession validates their contents.
+    assert page.locator('#session-file').get_attribute('accept') is None
     # Capture the exact downloaded JSON in this test via a wrapper around codec.
     # The file content was encoded while a valid source map and breakpoint existed.
     # Change the emulator environment and then restore it.
@@ -111,7 +119,7 @@ with sync_playwright() as p:
     page.locator('#clock').select_option('2000000')
     page.locator('#asm-listing').evaluate('(el)=>el.textContent="changed"')
     payload=page.evaluate('window._latestJson')
-    page.locator('#session-file').set_input_files({'name':'saved.z80session',
+    page.locator('#session-file').set_input_files({'name':'z80-lab-session.z80session-2',
        'mimeType':'application/json','buffer':payload.encode()})
     page.get_by_text('Session restored. CPU paused; Run to continue.').wait_for()
     assert page.locator('#asm-source').input_value()==saved_source

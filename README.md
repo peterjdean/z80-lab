@@ -95,3 +95,12 @@ The release-readiness branch adds a GitHub Actions WebAssembly build with a
 checksum-verified static-site ZIP. See [DEPLOYMENT.md](DEPLOYMENT.md) for the
 private Euler staging procedure and Apache requirements. Nothing is deployed
 to Popper automatically.
+
+### Pre-v1.0 staging polish
+
+Assembler listings now render large `DB` data blocks across addressed eight-byte
+continuation rows, keeping source annotations visible without modifying the
+generated Intel HEX or debugger source mapping. Session downloads are named
+`z80-lab-session-YYYYMMDD-HHMMSS-mmm.z80session` (UTC). The session opener
+does not filter filenames, so Safari's older `.z80session-2` downloads remain
+selectable; the existing strict content/size checks still run before restore.
