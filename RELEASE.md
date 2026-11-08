@@ -38,6 +38,37 @@ On Euler, replacing RUN_ID with the successful post-merge Actions run:
 Confirm `site-manifest.json` declares `version: 1.0.0` and the exact
 post-merge SHA in `revision`. The ZIP/checksum must come from the same run.
 
+### Keep the release manager's asset allowlist in sync
+
+The release ZIP contains `help.html`, a new approved static asset in v1.0.
+`stage_release.py` imports its strict approved-file list from
+`package_site.py` **on Popper**. An old copy rejects this otherwise valid
+archive with `FAIL: Release archive has missing, duplicate or unapproved files`.
+The package checksum may still pass, because this is a *local allowlist*
+mismatch rather than corrupt ZIP contents.
+
+From the same approved, post-merge Git checkout on Euler:
+
+    cd ~/z80-web-v0.6.0
+    git show HEAD:scripts/package_site.py > ~/z80-v1-release/package_site.py
+
+Transfer that helper from the Mac (the `.new` suffix prevents accidental
+replacement before backup):
+
+    scp -3 pd@euler.lan:~/z80-v1-release/package_site.py \
+      popper:~/z80-deploy/package_site.py.new
+
+On Popper, preserve the old file and activate the matching allowlist:
+
+    cd ~/z80-deploy
+    cp -a package_site.py package_site.py.pre-v1.0.0
+    mv package_site.py.new package_site.py
+    python3 -c "from package_site import ASSETS; assert 'help.html' in ASSETS; print('v1.0 allowlist OK')"
+
+The strict SHA256 and per-asset checks in `stage_release.py` stay enabled.
+For later releases, update this helper **only when** the package-approved
+asset set or release format changes, and review the change in the same PR.
+
 ## 2. Deploy FIRST to private staging
 
 From the Mac:
