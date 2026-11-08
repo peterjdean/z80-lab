@@ -22,7 +22,7 @@ class Ids(HTMLParser):
 
 def check(root, site=False):
     base = Path(root)
-    expected = ["index.html", "app.js", "worker.js", "style.css", "assembler-core.mjs", "assembler-source.js", "session-format.mjs", "source-step.mjs"]
+    expected = ["index.html", "help.html", "app.js", "worker.js", "style.css", "assembler-core.mjs", "assembler-source.js", "session-format.mjs", "source-step.mjs"]
     if site:
         expected += ["z80wasm.mjs", "z80wasm.wasm", "assembler.js", "THIRD_PARTY_LICENSES.txt",
                      "examples/hello.hex", "examples/console_hello.hex",

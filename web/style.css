@@ -118,3 +118,20 @@ button.asm-gutter-line.source-current.source-breakpoint{background:#674139;color
   color:#ffd0c6;background:#3d242b;border:1px solid #85494c;border-radius:6px;
   padding:5px 9px;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
 .asm-diagnostic:hover,.asm-diagnostic:focus-visible{background:#61353b;outline-color:#f5a09c}
+/* Public v1.0 release: header help link and a readable help page. */
+.help-link{display:inline-block;text-decoration:none;color:#8eefd4;border:1px solid #277c70;
+  border-radius:7px;padding:7px 11px;font-size:12px;font-weight:650}
+.help-link:hover,.help-link:focus-visible{background:#193b35;color:#cefff2}
+.help-page{max-width:980px;margin:0 auto;padding:22px 16px 56px}
+.help-page h1{font-size:26px;margin:0 0 8px;color:#e6f7f8}
+.help-page .lead{color:#a1b9c7;line-height:1.65;margin:0 0 24px}
+.help-section{border:1px solid #2a3a49;background:#121d2a;border-radius:12px;margin:14px 0;padding:22px}
+.help-section h2{font-size:17px;margin:0 0 12px;color:#72e4c7}
+.help-section h3{font-size:14px;margin:18px 0 7px}
+.help-section p,.help-section li{line-height:1.65;color:#c1d0da}
+.help-section li{margin:7px 0}
+.help-section code,.help-section kbd{background:#1d2d3d;padding:2px 5px;border-radius:4px;color:#c6f2e8}
+.help-section a,.help-page a{color:#8eefd4}
+.help-section a:hover,.help-page a:hover{text-decoration:none}
+.help-section ul,.help-section ol{padding-left:24px}
+.help-section .notice{font-size:12px;color:#9cb7c2}

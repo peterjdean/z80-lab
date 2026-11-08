@@ -2,7 +2,7 @@ name: Z80/LAB checks
 
 on:
   push:
-    branches: [main, 'feature/**']
+    branches: [main, 'feature/**', 'release/**']
   pull_request:
 
 jobs:
@@ -61,6 +61,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_package_site.py -v
       - name: Test atomic stage install, checksum validation and rollback
         run: python3 -m unittest discover -s tests -p test_stage_release.py -v
+      - name: Check release metadata and bundled user guide
+        run: python3 -m unittest discover -s tests -p test_release_metadata.py -v
       - name: Create ZIP release candidate and SHA256 checksum
         run: python3 scripts/package_site.py --site build-wasm/site --output dist/z80-lab-site.zip --revision "$GITHUB_SHA"
       - name: Verify packaged archive checksum

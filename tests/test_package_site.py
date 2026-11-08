@@ -22,7 +22,7 @@ class PackageSiteTests(unittest.TestCase):
             path.write_bytes(b"\x00asm\x01\x00\x00\x00" if name == "z80wasm.wasm" else b"sample file\n")
 
     def make(self, name="site.zip"):
-        return create_package(self.site, self.base / name, revision="a" * 40, version="0.9.0")
+        return create_package(self.site, self.base / name, revision="a" * 40, version="1.0.0")
 
     def test_archive_contains_only_allowlisted_site_files_and_manifest(self):
         (self.site / "secret.txt").write_text("DO NOT SHIP")
@@ -33,7 +33,7 @@ class PackageSiteTests(unittest.TestCase):
             self.assertEqual(set(archive.namelist()), set(ASSETS) | {"site-manifest.json"})
             self.assertIsNone(archive.testzip())
             manifest = json.loads(archive.read("site-manifest.json"))
-            self.assertEqual(manifest["version"], "0.9.0")
+            self.assertEqual(manifest["version"], "1.0.0")
             self.assertEqual(manifest["revision"], "a" * 40)
             for name in ASSETS:
                 data = archive.read(name)
@@ -56,7 +56,7 @@ class PackageSiteTests(unittest.TestCase):
 
     def test_invalid_revision_and_symlink_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "Revision"):
-            create_package(self.site, self.base / "site.zip", revision="../../bad", version="0.9.0")
+            create_package(self.site, self.base / "site.zip", revision="../../bad", version="1.0.0")
         index = self.site / "index.html"
         index.unlink()
         index.symlink_to(self.site / "app.js")

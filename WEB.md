@@ -1,4 +1,8 @@
-# Z80/LAB — Safari-compatible browser development environment (v0.9)
+# Z80/LAB — historical browser development notes (v0.6–v0.9)
+
+For v1.0 public usage see [the user guide](web/help.html); for current release
+and deployment steps see [README.md](README.md) and [RELEASE.md](RELEASE.md).
+This file preserves the incremental v0.6–v0.9 development history.
 
 The v0.6 baseline added a third-party ASM80 browser assembler, a source editor,
 assembler diagnostics, a machine-code listing, save/open `.asm` and download
