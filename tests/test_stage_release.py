@@ -23,7 +23,7 @@ class ReleaseTests(unittest.TestCase):
         self.root = self.base / "deploy"
 
     def package(self, sha, path):
-        return create_package(self.site, self.base / path, revision=sha, version="0.9.0")
+        return create_package(self.site, self.base / path, revision=sha, version="1.0.0")
 
     def test_verified_install_repeat_and_atomic_rollback(self):
         first, first_sha = self.package("a" * 40, "first.zip")

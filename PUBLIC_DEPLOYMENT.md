@@ -1,8 +1,13 @@
 # Z80/LAB public-deployment preparation
 
-**Private staging only.** This work adds verified, versioned deployment and
-hardened headers. It does not modify Popper, publish DNS, acquire certificates,
-open a new public listener, or affect the existing Peter J Dean/Rowanbank sites.
+**Historical hardening plan:** these instructions describe the preparation
+of the private staging vhost. The production HTTPS site is subsequently live
+at https://z80.peterjdean.com, with an independent document root at
+`/var/www/z80-lab-public/current` and a separate Let's Encrypt certificate.
+See [RELEASE.md](RELEASE.md) for the current v1.0 release procedure.
+The staging environment remains private at `127.0.0.1:8082`, served from
+`/var/www/z80-lab/current`. Existing Peter J Dean/Rowanbank vhosts remain
+separate.
 
 ## Build provenance
 

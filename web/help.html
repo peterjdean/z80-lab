@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Z80/LAB v1.0.0 guide: assemble, run, debug and save Z80 programs in your browser." />
+  <title>Z80/LAB v1.0.0 — User guide</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brandmark">Z80<span class="slash">/</span></span><div><b>LAB</b><small>USER GUIDE · v1.0.0</small></div></div>
+    <div class="topright"><a class="help-link" href="index.html">Back to emulator</a><span class="tag">Runs locally in your browser</span></div>
+  </header>
+  <main class="help-page">
+    <h1>Getting started with Z80/LAB</h1>
+    <p class="lead">Z80/LAB is a browser-based Zilog Z80 development environment. Assemble a program, execute it in a WebAssembly emulator, examine CPU and RAM state and save your session to a file. No account or installation is required.</p>
+
+    <section class="help-section">
+      <h2>1. Assemble and run a program</h2>
+      <ol>
+        <li>In <strong>Assembly workspace</strong>, choose <strong>Print a message</strong> from the Example menu and click <strong>Insert example</strong>.</li>
+        <li>Click <strong>Assemble &amp; load</strong>. The listing shows generated addresses, bytes and source statements. The program counter is set to the assembled entry address.</li>
+        <li>Click <strong>Run</strong>. The serial terminal should display <code>Hello from Z80/LAB!</code>.</li>
+        <li>Try the <strong>Alphabet loop</strong> example; it prints the first 16 letters of the alphabet.</li>
+      </ol>
+      <p>You can edit the Z80 assembly source directly, open a local <code>.asm</code> file, save the editor contents or download the assembled program as Intel HEX.</p>
+    </section>
+
+    <section class="help-section">
+      <h2>2. Debug execution</h2>
+      <ul>
+        <li><strong>Step</strong> executes one Z80 instruction. <strong>Step source</strong> advances to the next mapped source line. It enters subroutine calls; it does not step over them.</li>
+        <li>Click a highlighted source line number or a disassembly line to toggle a breakpoint, or enter a hexadecimal address beside <strong>Break at</strong>.</li>
+        <li><strong>Run</strong> continues execution; <strong>Pause</strong> stops it. <strong>Reset</strong> resets the CPU; loading another program resets the emulator and clears breakpoints.</li>
+        <li><strong>CPU state</strong> displays main and shadow registers, flags, PC, SP and counters. The <strong>Disassembly</strong> panel follows PC or can be navigated manually.</li>
+        <li><strong>Memory inspector</strong> displays bytes in hex and ASCII. Enter a hexadecimal address to navigate, or edit memory using pairs of hex digits.</li>
+      </ul>
+      <p class="notice">Source-level debugging requires a current source map. Editing source or executable bytes, or loading a different program, invalidates the map: reassemble to restore source stepping and source breakpoints. Not every data-only source line has an executable breakpoint location.</p>
+    </section>
+
+    <section class="help-section">
+      <h2>3. Load programs and use serial I/O</h2>
+      <p><strong>Load program</strong> offers prebuilt examples and local Intel HEX, text-hex and raw binary files. For raw <code>.bin</code> files, specify the hexadecimal <strong>Binary origin</strong>. The <strong>Serial terminal</strong> displays output from the emulator's virtual ports 00, 01 and 02; its input box lets you send characters to programs expecting terminal input.</p>
+      <p>The virtual clock can be set to 2, 4, 6 or 8 MHz, or <strong>Unlimited</strong>. These settings control emulated execution pacing, not the physical speed of a historical Z80 computer.</p>
+    </section>
+
+    <section class="help-section">
+      <h2>4. Save and restore a session</h2>
+      <ol>
+        <li>Click <strong>Save session</strong> to pause the CPU and download a timestamped <code>.z80session</code> file.</li>
+        <li>Click <strong>Open session</strong> and select that file to restore CPU and RAM, assembly source, source map, breakpoints, terminal text and debugger controls.</li>
+        <li>The CPU is always <strong>paused after restore</strong>. Click <strong>Run</strong> to continue.</li>
+      </ol>
+      <p>Some browsers append a suffix such as <code>.z80session-2</code> when files share a name. Those files can be selected too; Z80/LAB validates the session contents rather than trusting the filename.</p>
+      <p class="notice">Sessions and source files stay on your device unless you choose to share them. There is no Z80/LAB account, server-side save feature or automatic cloud synchronisation.</p>
+    </section>
+
+    <section class="help-section">
+      <h2>5. Shortcuts and assembler syntax</h2>
+      <ul>
+        <li><kbd>F5</kbd> Run; <kbd>Shift+F5</kbd> Pause; <kbd>F10</kbd> Step instruction.</li>
+        <li><kbd>F11</kbd> or <kbd>Shift+F10</kbd> Step source. On some Macs, press the <kbd>Fn</kbd> key with function keys.</li>
+        <li><kbd>Command+Enter</kbd> on Mac or <kbd>Ctrl+Enter</kbd> elsewhere: Assemble &amp; load.</li>
+      </ul>
+      <p>The integrated assembler is <strong>ASM80</strong>, not Pasmo. It supports normal Z80 mnemonics, labels, <code>ORG</code>, <code>DB</code> and hexadecimal <code>$</code> constants; single-file assembly only. <code>INCLUDE</code> and <code>INCBIN</code> are intentionally unsupported. Errors with a known line show a marked source line and a clickable diagnostic.</p>
+    </section>
+
+    <section class="help-section">
+      <h2>Compatibility, privacy and limitations</h2>
+      <p>The public release targets <strong>Safari 16+</strong> with JavaScript ES modules and WebAssembly. Other modern browsers supporting these features should work, but have not all been independently verified. Z80/LAB runs CPU emulation and assembly locally in the browser: it does not upload your programs or session files.</p>
+      <p>Source stepping is not subroutine step-over. The browser has not yet completed every external Z80 conformance suite; earlier native-core tests are not a guarantee of full browser conformance. This is an educational/development emulator, not a production hardware replacement.</p>
+      <p>Original project licence and third-party notices are available in <a href="THIRD_PARTY_LICENSES.txt">third-party licences</a>. Z80/LAB v1.0.0.</p>
+    </section>
+    <p><a class="help-link" href="index.html">Return to Z80/LAB</a></p>
+  </main>
+</body>
+</html>

@@ -1,4 +1,7 @@
-# Z80/LAB release-candidate staging (pre-v1.0)
+# Z80/LAB original release-candidate staging notes (historical, pre-v1.0)
+
+The public v1.0 procedure is in [RELEASE.md](RELEASE.md).
+The original private-stage procedure below is retained for reference.
 
 This stage is deliberately **not** a public deployment. No changes to Popper,
 its existing Apache vhosts or DNS are made by the workflow. The native emulator

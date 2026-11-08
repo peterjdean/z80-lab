@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(z80emu VERSION 0.9.0 LANGUAGES CXX)
+project(z80emu VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -33,6 +33,7 @@ if(EMSCRIPTEN)
     SUFFIX ".mjs" OUTPUT_NAME "z80wasm"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/site")
   file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/web/index.html"
+            "${CMAKE_CURRENT_SOURCE_DIR}/web/help.html"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/app.js"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/worker.js"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/style.css"

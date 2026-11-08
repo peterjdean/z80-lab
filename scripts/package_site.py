@@ -14,6 +14,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = (
     "index.html",
+    "help.html",
     "app.js",
     "worker.js",
     "style.css",
