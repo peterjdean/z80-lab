@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Z80/LAB v1.0.0 guide: assemble, run, debug and save Z80 programs in your browser." />
-  <title>Z80/LAB v1.0.0 — User guide</title>
+  <meta name="description" content="Z80/LAB v1.0.1 guide: assemble, run, debug and save Z80 programs in your browser." />
+  <title>Z80/LAB v1.0.1 — User guide</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brandmark">Z80<span class="slash">/</span></span><div><b>LAB</b><small>USER GUIDE · v1.0.0</small></div></div>
+    <div class="brand"><span class="brandmark">Z80<span class="slash">/</span></span><div><b>LAB</b><small>USER GUIDE · v1.0.1</small></div></div>
     <div class="topright"><a class="help-link" href="index.html">Back to emulator</a><span class="tag">Runs locally in your browser</span></div>
   </header>
   <main class="help-page">
@@ -70,7 +70,9 @@
       <h2>Compatibility, privacy and limitations</h2>
       <p>The public release targets <strong>Safari 16+</strong> with JavaScript ES modules and WebAssembly. Other modern browsers supporting these features should work, but have not all been independently verified. Z80/LAB runs CPU emulation and assembly locally in the browser: it does not upload your programs or session files.</p>
       <p>Source stepping is not subroutine step-over. The browser has not yet completed every external Z80 conformance suite; earlier native-core tests are not a guarantee of full browser conformance. This is an educational/development emulator, not a production hardware replacement.</p>
-      <p>Original project licence and third-party notices are available in <a href="THIRD_PARTY_LICENSES.txt">third-party licences</a>. Z80/LAB v1.0.0.</p>
+      <h3>Independent project and licensing</h3>
+      <p>Z80/LAB is an unofficial, independently developed Z80-compatible emulator. It is not affiliated with, sponsored by or endorsed by Zilog, Inc. Z80 is a trademark of Zilog, Inc.; the name is used to describe instruction-set compatibility.</p>
+      <p>Original application code is released under the <a href="LICENSE">MIT licence</a>. The bundled assembler is separately MIT-licensed; see <a href="THIRD_PARTY_LICENSES.txt">third-party notices</a>. The compiler-generated runtime is attributed in the <a href="EMSCRIPTEN_LICENSE.txt">Emscripten licence</a>. Z80/LAB v1.0.1.</p>
     </section>
     <p><a class="help-link" href="index.html">Return to Z80/LAB</a></p>
   </main>

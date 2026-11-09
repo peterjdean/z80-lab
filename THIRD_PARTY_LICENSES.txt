@@ -1,3 +1,24 @@
+Third-party notices for Z80/LAB v1.0.1
+
+1. Integrated browser assembler
+   @asm80/core 1.3.0, Martin Maly — MIT
+   Upstream: https://github.com/asm80/asm80-core
+   The full original MIT notice follows below.
+
+2. Emscripten-generated JavaScript/WebAssembly runtime
+   Emscripten 4.0.23 — MIT or University of Illinois/NCSA
+   Upstream: https://github.com/emscripten-core/emscripten/tree/4.0.23
+   Full pinned upstream licensing terms: EMSCRIPTEN_LICENSE.txt
+
+3. Z80/LAB original application source
+   MIT; full notice: LICENSE
+
+Build dependency: esbuild 0.25.12 is MIT-licensed and is used at
+build time to generate assembler.js. The esbuild executable, the
+Node.js packages and node_modules are not part of the deployed site.
+
+--- ASM80 licence text ---
+
 Third-party browser assembler: @asm80/core 1.3.0
 Project: https://github.com/asm80/asm80-core
 Copyright (c) 2023 Martin Maly

@@ -1,5 +1,17 @@
 # Z80/LAB release notes
 
+## v1.0.1 — licence notices and attribution
+
+Maintenance-only update; no emulator instruction semantics, APIs, saved-session
+format or debugger behaviour changes.
+
+- Bundle the project's MIT `LICENSE` with the downloadable static site.
+- Add the exact pinned Emscripten 4.0.23 licence text, and identify it in
+  third-party notices and the user guide.
+- Add a non-affiliation and Z80 trademark disclaimer; link all notices from
+  the browser interface and document source/licence boundaries.
+- Strengthen release tests to require version consistency and license assets.
+
 ## v1.0.0 — first public release
 
 Z80/LAB is a self-contained browser-based Zilog Z80 development environment,

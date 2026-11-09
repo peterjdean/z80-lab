@@ -1,4 +1,4 @@
-# Z80/LAB — v1.0.0
+# Z80/LAB — v1.0.1
 
 A browser-based Zilog Z80 development environment with a tested native C++
 CPU core compiled to WebAssembly, an integrated ASM80 assembler, serial I/O,
@@ -61,7 +61,8 @@ GitHub Actions independently runs native, assembler, WebAssembly,
 release-archive and deployment/rollback tests. Its `z80-lab-static-site`
 artifact contains a SHA256-verified ZIP and checksum. Runtime assets include
 `index.html`, `help.html`, `assembler.js`, `z80wasm.mjs`,
-`z80wasm.wasm`, bundled examples, and third-party licence notices.
+`z80wasm.wasm`, bundled examples, `LICENSE`, `THIRD_PARTY_LICENSES.txt`
+and `EMSCRIPTEN_LICENSE.txt`.
 
 ## Deployment and release
 
@@ -77,5 +78,13 @@ Historical development notes are retained in [WEB.md](WEB.md),
 
 ## Licence
 
-Original project: [LICENSE](LICENSE). The bundled ASM80 assembler and
-other notices: [THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt).
+Original application and documentation: [MIT licence](LICENSE).
+Bundled assembler: [third-party notices](THIRD_PARTY_LICENSES.txt).
+Compiler-generated WebAssembly/JavaScript runtime: [pinned Emscripten
+licence](EMSCRIPTEN_LICENSE.txt). See [LICENSING.md](LICENSING.md)
+for provenance, scope, trademark clarification and the non-commercial project
+intent.
+
+**Independence notice:** Z80/LAB is an unofficial, independent Z80-compatible
+emulator and is not affiliated with, sponsored by or endorsed by Zilog, Inc.
+Z80 is a trademark of Zilog, Inc.
