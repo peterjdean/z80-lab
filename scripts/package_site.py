@@ -26,6 +26,8 @@ ASSETS = (
     "z80wasm.mjs",
     "z80wasm.wasm",
     "THIRD_PARTY_LICENSES.txt",
+    "EMSCRIPTEN_LICENSE.txt",
+    "LICENSE",
     "examples/hello.hex",
     "examples/monitor.hex",
     "examples/console_hello.hex",

@@ -1,4 +1,4 @@
-# Z80/LAB v1.0.0 — production release checklist
+# Z80/LAB v1.0.1 — production release checklist
 
 The public site is **https://z80.peterjdean.com/**, hosted by Apache on
 Popper with its own Let's Encrypt TLS certificate. This checklist promotes
@@ -35,12 +35,13 @@ On Euler, replacing RUN_ID with the successful post-merge Actions run:
     sha256sum -c z80-lab-site.zip.sha256
     unzip -p z80-lab-site.zip site-manifest.json | python3 -m json.tool
 
-Confirm `site-manifest.json` declares `version: 1.0.0` and the exact
+Confirm `site-manifest.json` declares `version: 1.0.1` and the exact
 post-merge SHA in `revision`. The ZIP/checksum must come from the same run.
 
 ### Keep the release manager's asset allowlist in sync
 
-The release ZIP contains `help.html`, a new approved static asset in v1.0.
+The release ZIP adds `LICENSE` and `EMSCRIPTEN_LICENSE.txt` as
+approved assets for v1.0.1, alongside the existing `help.html`.
 `stage_release.py` imports its strict approved-file list from
 `package_site.py` **on Popper**. An old copy rejects this otherwise valid
 archive with `FAIL: Release archive has missing, duplicate or unapproved files`.
@@ -61,9 +62,9 @@ replacement before backup):
 On Popper, preserve the old file and activate the matching allowlist:
 
     cd ~/z80-deploy
-    cp -a package_site.py package_site.py.pre-v1.0.0
+    cp -a package_site.py package_site.py.pre-v1.0.1
     mv package_site.py.new package_site.py
-    python3 -c "from package_site import ASSETS; assert 'help.html' in ASSETS; print('v1.0 allowlist OK')"
+    python3 -c "from package_site import ASSETS; assert {'LICENSE', 'EMSCRIPTEN_LICENSE.txt'} <= set(ASSETS); print('v1.0.1 licence allowlist OK')"
 
 The strict SHA256 and per-asset checks in `stage_release.py` stay enabled.
 For later releases, update this helper **only when** the package-approved
@@ -94,7 +95,10 @@ On the Mac, access the private site via:
 
 Open `http://127.0.0.1:18082/index.html` in Safari. Hard refresh and check:
 
-- Browser footer shows v1.0.0; Help & guide opens `help.html`.
+- Browser footer shows v1.0.1; Help & guide opens `help.html`.
+- Help page and emulator footer link to `LICENSE`,
+  `THIRD_PARTY_LICENSES.txt` and `EMSCRIPTEN_LICENSE.txt`.
+- These licence files are all served as HTTP 200 from staging.
 - Print a message and Alphabet loop assemble, load, execute correctly.
 - Breakpoints, source stepping, instruction stepping, diagnostics work.
 - Save and restore session, including old Safari-suffixed filenames.
@@ -132,6 +136,9 @@ sequence. Verify from Popper:
     curl -fsSI https://z80.peterjdean.com/
     curl -fsSI https://z80.peterjdean.com/help.html
     curl -fsSI https://z80.peterjdean.com/z80wasm.wasm
+    curl -fsSI https://z80.peterjdean.com/LICENSE
+    curl -fsSI https://z80.peterjdean.com/THIRD_PARTY_LICENSES.txt
+    curl -fsSI https://z80.peterjdean.com/EMSCRIPTEN_LICENSE.txt
 
 Look for HTTP 200, `Content-Type: application/wasm` on the WASM asset,
 `Cache-Control: no-store` and the approved Content Security Policy.
@@ -147,7 +154,7 @@ because GitHub Actions artifacts expire.
 
 ## 5. Tag the deployed commit LAST
 
-Only after public tests succeed and production serves this exact v1.0.0
+Only after public tests succeed and production serves this exact v1.0.1
 commit, on Euler:
 
     cd ~/z80-web-v0.6.0
@@ -157,19 +164,19 @@ commit, on Euler:
     git rev-parse HEAD
 
 Check HEAD is identical to the installed production manifest revision. If
-`v1.0.0` does not already exist and the working tree is clean:
+`v1.0.1` does not already exist and the working tree is clean:
 
-    git tag -a v1.0.0 -m "Z80/LAB v1.0.0"
-    git push origin v1.0.0
+    git tag -a v1.0.1 -m "Z80/LAB v1.0.1"
+    git push origin v1.0.1
 
 Publish a GitHub Release for this tag and attach the same verified archive
 and checksum. Using the GitHub CLI on Euler:
 
-    gh release create v1.0.0 \
+    gh release create v1.0.1 \
       ~/z80-v1-release/z80-lab-site.zip \
       ~/z80-v1-release/z80-lab-site.zip.sha256 \
       --repo peterjdean/z80-lab \
-      --title "Z80/LAB v1.0.0" \
+      --title "Z80/LAB v1.0.1" \
       --notes-file CHANGELOG.md
 
 This completes the stable release without retagging or rebasing a published SHA.

@@ -1,6 +1,6 @@
 {
   "name": "z80-lab-web-tools",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Client-side ASM80 assembler integration for Z80/LAB",

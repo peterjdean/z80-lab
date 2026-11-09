@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(z80emu VERSION 1.0.0 LANGUAGES CXX)
+project(z80emu VERSION 1.0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -42,6 +42,8 @@ if(EMSCRIPTEN)
             "${CMAKE_CURRENT_SOURCE_DIR}/web/session-format.mjs"
             "${CMAKE_CURRENT_SOURCE_DIR}/web/source-step.mjs"
             "${CMAKE_CURRENT_SOURCE_DIR}/THIRD_PARTY_LICENSES.txt"
+            "${CMAKE_CURRENT_SOURCE_DIR}/EMSCRIPTEN_LICENSE.txt"
+            "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
        DESTINATION "${CMAKE_BINARY_DIR}/site")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/site/examples")
   file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/examples/hello.hex"
